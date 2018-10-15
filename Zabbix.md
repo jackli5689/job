@@ -1,6 +1,8 @@
 #Zabbix
 
 yum install -y lrzsz   	#安装secretCRT中的rz上传和sz下载
+`CentOS7用TAB键补全命令软件：yum install -y bash-completion
+然后退出bash并重登bash`
 ####监控概述
 
 ######监控对象
@@ -56,7 +58,7 @@ client端（安装net-snmp，需要启动代理服务）<<————>>server�
 
 `rocommunity oldboy 192.168.1.201 `
 
-----rocommunity是团体名（在zabbix中用$(rocommunity)表示）----oldboy是团体名的值，IP地址是要监控的主机，这里写的是本地主机，snmp需要snmp代理端起服务，不需要服务端起服务。然后使用工具来连接代理就可以获取数据。（相当于ssh，通过ssh命令就可以连接过去）
+----rocommunity是社区名（在zabbix中用$(SNMP_COMMUNITY)表示宏）----oldboy是团体名，IP地址是要监控的主机，这里写的是本地主机，snmp需要snmp代理端起服务，不需要服务端起服务。然后使用工具来连接代理就可以获取数据。（相当于ssh，通过ssh命令就可以连接过去）
 
 * systemctl start snmpd    ---开启snmp服务
 * snmp默认监听的是TCP的199端口和UDP的161端口
@@ -255,5 +257,285 @@ UserParameter=nginx.active,/usr/bin/curl -s http://192.168.1.201:8080/nginx-stat
 6. zabbix_get -s 192.168.1.201 -p 10050 -k "nginx.active"  #测试获取值是否设置成功
 7. 在zabbix-web界面上创建item监控项。
 
+###Zabbix最后部分
+#####通知（配置--动作下设置）
+1. 通知什么（action）
+2. 什么时候通知（conditions）
+3. 怎么通知（operation）
+4. 通过什么途径发送
+5. 发送给谁
+6. 通知升级（多步骤通知给不同人）
+7. 通知给谁
+
+###实战第一步：
+1. 新建用户群组并分配权限，权限只能分配给群组
+2. 创建用户并选择用户角色
+3. 报警媒介
+4. action（动作）
+
+##Zabbix生产案例实战
+1.项目规划：
+<pre>主机分组
+		交换机
+		Nginx
+		Tomcat
+		Mysql
+</pre>
+<pre>监控对象识别
+1. 使用SNMP监控交换机
+2. 使用IPMI监控服务器硬件
+3. 使用Agent监控服务器
+4. 使用JMX监控java
+5. 监控Mysql
+6. 监控Web状态
+7. 监控Nginx状态
+</pre>
+<pre>#监控交换机等snmp设备
+1. 交换机上开启snmp
+	config terminal 
+	snmp-server community public ro
+	end
+
+2. 在zabbix上添加监控
+	设置snmp Interfaces
+
+3. 关联监控模板
+</pre>
+<pre>#IPMI
+建议使用自定义item来实现ipmi
+
+</pre>
+<pre>#JMX(使用zabbix-java-gateway代理)监控java程序
+1. yum install -y zabbix-java-gateway java-1.8.0 #安装JMX和java JDK
+2. vim /etc/zabbix/zabbix_java_gateway.conf  #默认配置即可
+3. systemctl start zabbix-java-gateway.service  #开启java代理
+4. netstat -tunlp   #检查10052端口和进程是否起来
+5. #vim /etc/zabbix/zabbix_server.conf #用于配置zabbix-java-gateway代理跟zabbix server联系
+	JavaGateway=192.168.1.233  #指定Java网关地址
+	JavaGatewayPort=10052	#指定java网关端口
+	StartJavaPollers=5	#设置启动多少个服务来轮循java代理
+6. 重启zabbix server
+7. 安装java应用测试，例如安装Tomcat，tomcat默认端口为8080
+	wget http://mirrors.shu.edu.cn/apache/tomcat/tomcat-8/v8.5.34/bin/apache-tomcat-8.5.34.tar.gz
+	tar -zxvf apache-tomcat-8.5.34.tar.gz 
+	mv apache-tomcat-8.5.34 /usr/local/
+	ln -s apache-tomcat-8.5.34/ /usr/local/tomcat
+	/usr/local/tomcat/bin/start.sh
+JMX有三种类型：1.无密码认证	2.用户名密码认证	3.ssl
+#开启JMX远程监控：
+#vim /usr/local/tomcat/bin/catalina.sh在最前面添加如下行，下面信息是从官网文档中搜索JMX找到的
+CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote
+  -Dcom.sun.management.jmxremote.port=8888
+  -Dcom.sun.management.jmxremote.ssl=false
+  -Dcom.sun.management.jmxremote.authenticate=false
+  -Djava.rmi.server.hostname=192.168.1.233"
+重启tomcat并检查8888和8080端口是否开启：netstat -tunlp
+然后使用windows下装的java JDK安装目录中/bin/jconsole进行连接测试看有没有问题，选择远程进程，输入开启jmx的IP加端口，例：192.168.1.233:8888,能连接看到信息则表示开启成功
+</pre>
+<pre>#监控Nginx
+1. 开启Nginx监控
+2. 编写脚本来采集数据
+3. 设置用户自定义参数
+4. 重启zabbix-agent
+5. 添加item
+6. 创建图形
+7. 创建触发器
+8. 创建模板（包含item，图形，触发器，screen）
+</pre>
+###监控Nginx操作
+<pre>
+1. 制作脚本放轩到nginx服务器中
+####zabbix_linux_plugin.sh#####
 
 
+#!/bin/bash
+###########################################
+# $Name:	Zabbix_linux_plugins.sh
+# $Version: v1.0
+# $Function: zabbix plugins
+# $Author: jack Li
+# $organization: www.mi.com
+# $Create Date: 2018-10-13
+# $Description: Monitor  Linux Service Status
+###########################################
+
+tcp_status_fun(){
+	TCP_STAT=$1
+	#当TCP多的时候ss比netstat快
+	#netstat -n |  awk '/^tcp/ {++state[$NF]} END {for(key in state) print key,state[key]}' > /tmp/netstat.tmp
+	ss -ant | awk 'NR>1 {++s[$1]} END {for(k in s) print k,s[k]}' > /tmp/netstat.tmp
+	TCP_STAT_VALUE=$(grep "$TCP_STAT" /tmp/netstat.tmp | cut -d ' ' -f2)
+	if [ -z $TCP_STAT_VALUE ];then
+		TCP_STAT_VALUE=0
+	fi
+	echo $TCP_STAT_VALUE
+}
+nginx_status_fun(){
+	NGINX_PORT=$1
+	NGINX_COMMAND=$2
+	nginx_active(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | grep 'Active' | awk '{print $NF}'
+	}
+	nginx_reading(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | grep 'Reading' | awk '{print $2}'
+	}
+	nginx_writing(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | grep 'Writing' | awk '{print $4}'
+	}
+	nginx_waiting(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | grep 'Waiting' | awk '{print $6}'
+	}
+	nginx_accepts(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | awk NR==3  | awk '{print $1}'
+	}
+	nginx_handled(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | awk NR==3  | awk '{print $2}'
+	}
+	nginx_requests(){
+		/usr/bin/curl "http://127.0.0.1:"$NGINX_PORT"/nginx_status/" 2> /dev/null | awk NR==3  | awk '{print $3}'
+	}
+	case $NGINX_COMMAND in
+		active)
+			nginx_active;
+			;;
+		reading)
+			nginx_reading;
+			;;
+		writing)
+			nginx_writing;
+			;;
+		waiting)
+			nginx_waiting;
+			;;
+		accepts)
+			nginx_accepts;
+			;;
+		handled)
+			nginx_handled;
+			;;
+		requests)
+			nginx_requests;
+			;;
+	esac
+}
+memcached_status_fun(){
+	M_PORT=$1
+	M_COMMAND=$2
+	echo -e "stats\nquit" | nc 127.0.0.1 "$M_PORT" | grep "STAT $M_COMMAND" | awk '{print $3}'
+}
+redis_status_fun(){
+	R_PORT=$1
+	R_COMMAND=2
+	(echo -en "INFO \r\n";sleep 1;) | nc 127.0.0.1 "$R_PORT" > /tmp/redis_"$R_PORT" .tmp
+	REDIS_STAT_VALUE=$(grep "" $R_COMMAND":" /tmp/redis_"$R_PORT".tmp | cut -d ':' -f2)
+	echo $REDIS_STAT_VALUE
+}
+main(){
+        case $1 in
+                tcp_status)
+                        tcp_status_fun $2;
+                        ;;
+                nginx_status)
+                        nginx_status_fun $2 $3;
+                        ;;
+                memcached_status)
+                        memecached_status_fun $2 $3;
+                        ;;
+                redis_status)
+                        redis_status_fun $2 $3
+                        ;;
+	*)
+		echo $"Usage:$0 {tcp_status key | memcached_status key | redis_status key | nginx_status key}"
+	esac
+}
+main $1 $2 $3
+###############################
+</pre>
+1. vim /etc/zabbix/zabbix_agentd.conf
+	Include=/etc/zabbix/zabbix_agentd.d/*.conf
+2. 把脚本移动到/etc/zabbix/zabbix_agentd.d
+3. 把nginx中的nginx-status改成nginx_status，并设置IP地址为只允许本机使用，以使脚本兼容
+        location /nginx_status {
+            stub_status on;
+            access_log off;
+            allow 127.0.0.1;
+            deny all;
+        }   
+4. 测试脚本
+5. #vim /etc/zabbix/zabbix_agentd.d/linux.conf
+UserParameter=linux_status[*],/etc/zabbix/zabbix_agentd.d/zabbix_linux_plugin.sh "$1" "$2" "$3"
+6. systemctl restart zabbix-agent
+7.  zabbix_get -s 192.168.1.201 -k linux_status[nginx_status,8080,active]  #用get测试一下
+8. 创建模板，机器太多无法创建很多个item,所以创建模板
+9. 链接模板到主机
+</pre>
+
+####媒体介质添加
+<pre>
+用脚本添加短信通知
+1. vim /etc/zabbix/zabbix_server.conf可查看到警告脚本路径：AlertScriptsPath=/usr/lib/zabbix/alertscripts
+2. 编写短信脚本在警告脚本路径下
+###############
+[root@cobbler-Zabbix alertscripts]# cat sms.sh 
+#!/bin/bash
+ALERT_TO=$1
+ALERT_TITLE=$2
+ALERT_BODY=$3
+
+echo $ALERT_TO >> /tmp/sms.log
+echo $ALERT_TITLE >> /tmp/sms.log
+echo $ALERT_BODY >> /tmp/sms.log
+###############
+3. 在要监控的主机上添加item项和图形---然后设置触发器---设置动作（actions），并设置动作上的发信内容和发信方式及对象---最后在对象用户上设置接收媒体的类型
+
+</pre>
+<pre>
+用脚本添加微信通知
+1.企业注册企业号，拥有唯一的key
+2.在linux中设置脚本，使用curl连接微信API发送微信报警
+</pre>
+<pre>
+移值监控项
+如果要把自定义item监控项移值到其他agent服务器上，只需要复制/etc/zabbix/zabbix_agentd.d/下的zabbix_linux_plugin.sh和linux.conf，还有/etc/zabbix/zabbix_agentd.conf 即可，然后可以在zabbix-server上用命令zabbix_get测试是否成功连接
+</pre>
+<pre>
+使用Percona监控插件监控mysql（自己实操失败）
+1. 安装percona监控插件源:
+yum install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
+2. 安装percona监控插件及所有的组件
+yum install -y percona-zabbix-templates php php-mysql
+3. 导入模板var/lib/zabbix/percona/templates/zabbix_agent_template_percona_mysql_server_ht_2.0.9-sver1.1.8.xml到zabbix server web上的模板库上（此模板导入会错误，需从网上自己找zabbix3.0的模板）
+4. 复制/var/lib/zabbix/percona/templates/userparameter_percona_mysql.conf到/etc/zabbix/zabbix_agentd.d/下
+5. 在/var/lib/zabbix/percona/scripts/目录下新建 ss_get_mysql_stats.php.conf文件，并输入值`<?php
+$mysql_user = 'root';
+$mysql_pass = 's3cret';`
+6. 测试脚本 /var/lib/zabbix/percona/scripts/get_mysql_stats_wrapper.sh gg
+405647
+7. 关联模板到主机中
+注意事项：当zabbix中监控没有图数据时，大部分是/tmp下的文件zabbix没有写入的文件
+</pre>
+<pre>
+WEB监控（不依赖zabbix agent,zabbix server自带的）
+1. 在zabbix web中，点击目标主机旁边的web进行设置监控
+2. 点击右上角新建方案
+3. 设置方案名称，更新间隔时间，要监听的网址，最大超时时间等
+4. 设置触发器
+</pre>
+<pre>
+针对zabbix agent来说，有两种模式
+1. 被动模式（默认模式zabbix-aget）
+2. 主动模式 （zabbix-agent(active)）
+什么时候切换为主动模式？
+1. 当队列的item 1分钟、5分钟、10分钟有延迟时
+2. 当zabbix server监控300+服务器时（针对普通服务器配置）
+怎么设置为主动模式？（实操失败）
+1. 在zabbix agent机器中，设置配置文件
+[root@linux-node1 ~]# vim /etc/zabbix/zabbix_agentd.conf 
+#Server=192.168.1.201   #注释被动模式
+ StartAgents=0  #关闭agent监听端口
+ServerActive=192.168.1.201  #设置主动模式zabbix server地址
+Hostname=linux-node1	#设置本地agent主机名
+2. [root@linux-node1 ~]# systemctl restart zabbix-agent
+3. 在zabbix server上添加agent主机，并关联主动模式（zabbix agent (active)）的模板即可,因为默认无主动模式的模板，所以只能用全部克隆功能来克隆一个模板，并（mass update）批量更新来更改（type）类型为zabbix agent (active)模式。
+4. 由于是主动模式，所以在主机添加完成后，主机界面ZBX图标是不亮的，而如果是被动模式则是开的
+</pre>
