@@ -620,6 +620,23 @@ Branch 'dev' set up to track remote branch 'dev' from 'origin'.
 再拉：
 
 $ git pull
+fatal: refusing to merge unrelated histories
+
+$ git pull origin master --allow-unrelated-histories
+From github.com:jackli5689/job
+ * branch            master     -> FETCH_HEAD
+Merge made by the 'recursive' strategy.
+ Cobbler.md | 335 +++++++++++++++++++++++++++++++
+ Python.md  |  10 +
+ Zabbix.md  | 541 +++++++++++++++++++++++++++++++++++++++++++++++++
+ git.md     | 663 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 1549 insertions(+)
+ create mode 100644 Cobbler.md
+ create mode 100644 Python.md
+ create mode 100644 Zabbix.md
+ create mode 100644 git.md
+
+$ git pull
 Auto-merging env.txt
 CONFLICT (add/add): Merge conflict in env.txt
 Automatic merge failed; fix conflicts and then commit the result.
