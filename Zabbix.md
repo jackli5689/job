@@ -1,6 +1,9 @@
 #Zabbix
 
+
+####SecureCRT
 yum install -y lrzsz   	#安装secretCRT中的rz上传和sz下载
+
 `CentOS7用TAB键补全命令软件：yum install -y bash-completion
 然后退出bash并重登bash`
 ####监控概述
@@ -172,8 +175,6 @@ IBM的nmon工具可生成性能报表
 	使用方法：在linux下执行nmon二进制文件生成nmon报告文件，命令例如：./nmon16e_x86_rhel72 -s 10 -c 10 -f -m /tmp/  
 	则会在/tmp下生成nmon报告文件，然后利用nmon analyser v55.xlsm这个文件来读取nmon文件生成excel形式的报告文件
 
-####SecureCRT
-SecureCRT下linuxt系统安装yum install lrzsz，即可使用rz -e命令上传，sz -e 命令下载 
  
 ####应用监控
 
@@ -538,4 +539,27 @@ Hostname=linux-node1	#设置本地agent主机名
 2. [root@linux-node1 ~]# systemctl restart zabbix-agent
 3. 在zabbix server上添加agent主机，并关联主动模式（zabbix agent (active)）的模板即可,因为默认无主动模式的模板，所以只能用全部克隆功能来克隆一个模板，并（mass update）批量更新来更改（type）类型为zabbix agent (active)模式。
 4. 由于是主动模式，所以在主机添加完成后，主机界面ZBX图标是不亮的，而如果是被动模式则是开的
+</pre>
+###zabbix proxy
+<pre>
+zabbix proxy不仅能解决主机多的问题还能解决跨机房的问题
+zabbix proxy不能跟zabbix server装在一台机器上，而且zabbix proxy必须是单独的数据库
+安装 zabbix proxy:
+yum install -y zabbix-proxy zabbix-proxy-mysql mariadb-server
+systemctl start mariadb
+#mysql
+create database zabbix_proxy character utf8;
+grant all on zabbix_proxy.* to zabbix_proxy@localhost identified by 'zabbix_proxy';
+
+cd /usr/share/doc/zabbix-proxy-mysql-3.0.3/
+zcat schema.sql.gz | mysql -uzabbix_proxy -pzabbix_proxy
+#vim /etx/zabbix/zabbix-proxy.conf
+Server=192.168.1.201
+Hostname=zabbix-proxy
+DBHost=localhost
+DBName-zabbix_proxy
+DBUser=zabbix_proxy
+DBPassword=zabbix_proxy
+
+systemctl start zabbix-proxy  #zabbix-proxy端口是10051
 </pre>
