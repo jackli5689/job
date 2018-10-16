@@ -613,6 +613,118 @@ Include=/etc/zabbix/zabbix_agentd.d/*.conf
 ###自动化监控
 <pre>
 1. 自动注册
+	1. Zabbix Agent自动添加
 2. 主动发现
-3.  
+	2.1 自动发现Discovery
+	2.2 Zabbix API
+#######自动注册操作：
+1. 在Agent中更改配置，关闭Agent被动模式，并设置StartAgent=0,然后设置主动模式的ServerActive地址。最后设置HostMetadataItem或者HostMetadata，HostMetadata是手动设置值，例：HostMetadata=Linux。HostMetadataItem是Zabbix Server 使用key来自动获取是windows还是linux,例如HostMetadataItem=system.uname
+#vim /etc/zabbix/zabbix_agentd.conf
+[root@linux-node1 ~]# grep '^[a-Z]'  /etc/zabbix/zabbix_agentd.conf             
+PidFile=/var/run/zabbix/zabbix_agentd.pid
+LogFile=/var/log/zabbix/zabbix_agentd.log
+LogFileSize=0
+StartAgents=0
+ServerActive=192.168.1.201
+Hostname=192.168.1.233
+HostMetadataItem=system.uname
+Include=/etc/zabbix/zabbix_agentd.d/*.conf
+
+2. 然后去Zabbix Server Web界面里面添加Action自动注册功能，设置匹配到的系统名称，例：(Host name) like (Linux) ,并设置相应的操作1.添加操作，2.添加主机到组中，3.添加相匹配的模板
+3. 查看自动成功添加的模板图形
+
+##########主动发现操作---2.1 自动发现Discovery：(实操失败)
+1. 在Agent中更改配置，关闭Agent主动模式，并设置StartAgent=3(表示开户Agent监听端口，等于0则表示禁用端口),然后设置被动模式的Active地址。
+2. #vim /etc/zabbix/zabbix_agentd.conf
+[root@linux-node1 ~]# grep '^[a-Z]'  /etc/zabbix/zabbix_agentd.conf             
+PidFile=/var/run/zabbix/zabbix_agentd.pid
+LogFile=/var/log/zabbix/zabbix_agentd.log
+LogFileSize=0
+StartAgents=3
+Server=192.168.1.201
+Hostname=192.168.1.233
+HostMetadataItem=system.uname
+Include=/etc/zabbix/zabbix_agentd.d/*.conf
+
+#############主动发现操作---Zabbix API
+去官网查找API使用方法：
+设置前端后，可以使用远程HTTP请求来调用API。为此，您需要将HTTP POST请求发送到api_jsonrpc.php位于前端目录中的文件。
+例如，如果您的Zabbix前端安装在http://company.com/zabbix下，则调用该apiinfo.version方法的HTTP请求可能如下所示：
+
+POST http://company.com/zabbix/api_jsonrpc.php HTTP / 1.1
+Content-Type：application / json-rpc
+{ “jsonrpc”： “2.0”， “method”： “apiinfo.version”， “ID”：1， “AUTH”：NULL， “PARAMS”：{}}
+该请求必须具有Content-Type标头集合至这些值中的一个：application/json-rpc，application/json或application/jsonrequest
+
+示例工作流程
+认证
+在您可以访问Zabbix内部的任何数据之前，您需要登录并获取身份验证令牌。这可以使用该user.login方法完成。我们假设您要以标准Zabbix Admin用户身份登录。然后您的JSON请求将如下所示：
+{ 
+    “jsonrpc” ： “2.0” ，
+    “method” ： “user.login” ，
+    “params” ： { 
+        “user” ： “Admin” ，
+        “password” ： “zabbix” 
+    } ，
+    “id” ： 1 ，
+    “auth” ： null 
+}
+让我们仔细看看请求对象。它具有以下属性：
+jsonrpc- API使用的JSON-RPC协议版本; Zabbix API实现了JSON-RPC 2.0版;
+method- 被调用的API方法;
+params- 将传递给API方法的参数;
+id - 请求的任意标识符;
+auth - 用户认证令牌; 因为我们还没有，所以它设置为null。
+
+如果您正确提供了凭据，则API返回的响应将包含用户身份验证令牌(token)：
+{ 
+    “jsonrpc” ： “2.0” ，
+    “result” ： “0424bd59b807674191e7d77572075f33” ，
+    “id” ： 1 
+}
+响应对象又包含以下属性：
+jsonrpc - 再次，JSON-RPC协议的版本;
+result - 方法返回的数据;
+id - 相应请求的标识符。
+
+老男孩Zabbix API实操：
+linux curl 使用API方法：
+curl -s -X POST -H 'application/json' -d '{ 
+    “jsonrpc” ： “2.0” ，
+    “method” ： “user.login” ，
+    “params” ： { 
+        “user” ： “jackli” ，
+        “password” ： “Mu123” 
+    } ，
+    “id” ： 1 ，
+    “auth” ： null 
+}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+###curl -s参数：静默  -X参数：请求命令  -H参数：标头集合值(application/json)  -d参数：请求的数据   最后是请求地址(http://192.168.1.201/zabbix/api_jsonrpc.php)调用API,并用python的json.tool工具来输出结果
+安装python-pip工具：
+[root@cobbler-Zabbix yum.repos.d]# yum install -y  python-setuptools
+[root@cobbler-Zabbix yum.repos.d]# rpm -ivh https://mirrors.aliyun.com/centos/7.5.1804/cloud/x86_64/openstack-pike/common/python-pip-8.1.2-1.el7.noarch.rpm
+[root@cobbler-Zabbix yum.repos.d]# pip install requests
+
+问题：
+[root@cobbler-Zabbix yum.repos.d]# pip install requests^C
+[root@cobbler-Zabbix yum.repos.d]# curl -s -X POST -H 'application/json' -d '{
+>     “jsonrpc” ： “2.0” ，
+>     “method” ： “user.login” ，
+>     “params” ： {
+>         “user” ： “jackli” ，
+>         “password” ： “Mu123”
+>     } ，
+>     “id” ： 1 ，
+>     “auth” ： null
+> }' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+No JSON object could be decoded
+
+
+
+
+
+</pre>
+
+<pre>
+
 </pre>
