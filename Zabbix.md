@@ -545,21 +545,74 @@ Hostname=linux-node1	#设置本地agent主机名
 zabbix proxy不仅能解决主机多的问题还能解决跨机房的问题
 zabbix proxy不能跟zabbix server装在一台机器上，而且zabbix proxy必须是单独的数据库
 安装 zabbix proxy:
+先要切换成阿里云的源
 yum install -y zabbix-proxy zabbix-proxy-mysql mariadb-server
 systemctl start mariadb
 #mysql
-create database zabbix_proxy character utf8;
+create database zabbix_proxy character set utf8;
 grant all on zabbix_proxy.* to zabbix_proxy@localhost identified by 'zabbix_proxy';
 
 cd /usr/share/doc/zabbix-proxy-mysql-3.0.3/
-zcat schema.sql.gz | mysql -uzabbix_proxy -pzabbix_proxy
+zcat schema.sql.gz | mysql -uzabbix_proxy -p zabbix_proxy
 #vim /etx/zabbix/zabbix-proxy.conf
-Server=192.168.1.201
-Hostname=zabbix-proxy
-DBHost=localhost
+Server=192.168.1.201	#server的地址
+Hostname=192.168.1.234    #proxy的地址
+DBHost=localhost        
 DBName-zabbix_proxy
 DBUser=zabbix_proxy
 DBPassword=zabbix_proxy
 
 systemctl start zabbix-proxy  #zabbix-proxy端口是10051
+
+附Server(1),Proxy(2),Agent(3)的配置信息
+#############
+1. [root@cobbler-Zabbix ~]# grep '^[a-Z]' /etc/zabbix/zabbix_server.conf 
+LogFile=/var/log/zabbix/zabbix_server.log
+LogFileSize=0
+PidFile=/var/run/zabbix/zabbix_server.pid
+DBHost=localhost
+DBName=zabbix
+DBUser=zabbix
+DBPassword=123456
+JavaGateway=192.168.1.233
+StartJavaPollers=5
+SNMPTrapperFile=/var/log/snmptrap/snmptrap.log
+Timeout=4
+AlertScriptsPath=/usr/lib/zabbix/alertscripts
+ExternalScripts=/usr/lib/zabbix/externalscripts
+LogSlowQueries=3000
+
+2. [root@zabbix-proxy1 ~]# grep '^[a-Z]' /etc/zabbix/zabbix_proxy.conf 
+Server=192.168.1.201
+ServerPort=10051
+Hostname=192.168.1.234
+LogFile=/var/log/zabbix/zabbix_proxy.log
+LogFileSize=0
+PidFile=/var/run/zabbix/zabbix_proxy.pid
+DBHost=localhost
+DBName=zabbix_proxy
+DBUser=zabbix_proxy
+DBPassword=zabbix_proxy
+SNMPTrapperFile=/var/log/snmptrap/snmptrap.log
+Timeout=4
+ExternalScripts=/usr/lib/zabbix/externalscripts
+LogSlowQueries=3000
+
+3. [root@linux-node1 ~]# grep '^[a-Z]' /etc/zabbix/zabbix_agentd.conf 
+PidFile=/var/run/zabbix/zabbix_agentd.pid
+LogFile=/var/log/zabbix/zabbix_agentd.log
+LogFileSize=0
+Server=192.168.1.234
+ListenPort=10050
+ServerActive=192.168.1.234
+Hostname=192.168.1.233       ##要么写localhost,要么写IP，其他名称因为没有DNS，所以解析不出来，Hostname都一样
+Include=/etc/zabbix/zabbix_agentd.d/*.conf
+#############
+</pre>
+
+###自动化监控
+<pre>
+1. 自动注册
+2. 主动发现
+3.  
 </pre>
