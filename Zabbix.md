@@ -689,42 +689,59 @@ id - 相应请求的标识符。
 
 老男孩Zabbix API实操：
 linux curl 使用API方法：
-curl -s -X POST -H 'application/json' -d '{ 
-    “jsonrpc” ： “2.0” ，
-    “method” ： “user.login” ，
-    “params” ： { 
-        “user” ： “jackli” ，
-        “password” ： “Mu123” 
-    } ，
-    “id” ： 1 ，
-    “auth” ： null 
-}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+下面这两个可以成功获取token
+`curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"user.login","params":{"user":"jackli","password":"Mu123"},"auth":null,"id":1}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool`
+
+`curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc": "2.0","method":"user.login","params":{"user":"jackli","password":"Mu123"},"auth": null,"id":0}' http://192.168.1.201/zabbix/api_jsonrpc.php`
+
+
 ###curl -s参数：静默  -X参数：请求命令  -H参数：标头集合值(application/json)  -d参数：请求的数据   最后是请求地址(http://192.168.1.201/zabbix/api_jsonrpc.php)调用API,并用python的json.tool工具来输出结果
 安装python-pip工具：
 [root@cobbler-Zabbix yum.repos.d]# yum install -y  python-setuptools
 [root@cobbler-Zabbix yum.repos.d]# rpm -ivh https://mirrors.aliyun.com/centos/7.5.1804/cloud/x86_64/openstack-pike/common/python-pip-8.1.2-1.el7.noarch.rpm
 [root@cobbler-Zabbix yum.repos.d]# pip install requests
+例子：获取token
+[root@cobbler-Zabbix ~]# curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"user.login","params":{"user":"jackli","password":"Mu123"},"auth":null,"id":1}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+{
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": "82cee37adf4cc37374f9558dcb5310d8"
+}
 
-问题：
-[root@cobbler-Zabbix yum.repos.d]# pip install requests^C
-[root@cobbler-Zabbix yum.repos.d]# curl -s -X POST -H 'application/json' -d '{
->     “jsonrpc” ： “2.0” ，
->     “method” ： “user.login” ，
->     “params” ： {
->         “user” ： “jackli” ，
->         “password” ： “Mu123”
->     } ，
->     “id” ： 1 ，
->     “auth” ： null
-> }' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
-No JSON object could be decoded
+下面可获取主机名
+`curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"host.get","params":{"output":["hostid","host"],"selectInterfaces":["interfaceid","ip"]},"auth":"82cee37adf4cc37374f9558dcb5310d8","id":3}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool`
 
-
-
+例子：获取主机名
+[root@cobbler-Zabbix ~]# curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"host.get","params":{"output":["hostid","host"],"selectInterfaces":["interfaceid","ip"]},"auth":"82cee37adf4cc37374f9558dcb5310d8","id":3}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+{
+    "id": 3,
+    "jsonrpc": "2.0",
+    "result": [
+        {
+            "host": "Zabbix -server",
+            "hostid": "10084",
+            "interfaces": [
+                {
+                    "interfaceid": "1",
+                    "ip": "192.168.1.201"
+                }
+            ]
+        },
+        {
+            "host": "cisco-switch3",
+            "hostid": "10109",
+            "interfaces": [
+                {
+                    "interfaceid": "6",
+                    "ip": "192.168.1.254"
+                }
+            ]
+        },
 
 
 </pre>
 
-<pre>
+
+
 
 </pre>
