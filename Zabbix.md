@@ -739,8 +739,179 @@ linux curl 使用API方法：
         },
 
 
+下面可获取模板
+`curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"template.get","params":{"output":"extend","filter":{"host":["Template OS Linux","Template OS Windows"]}},"auth":"82cee37adf4cc37374f9558dcb5310d8","id":3}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool`
+
+例子：获取模板
+[root@cobbler-Zabbix ~]# curl -s -X POST -H 'Content-Type:application/json' -d'{"jsonrpc":"2.0","method":"template.get","params":{"output":"extend","filter":{"host":["Template OS Linux","Template OS Windows"]}},"auth":"82cee37adf4cc37374f9558dcb5310d8","id":3}' http://192.168.1.201/zabbix/api_jsonrpc.php | python -m json.tool
+{
+    "id": 3,
+    "jsonrpc": "2.0",
+    "result": [
+        {
+            "available": "0",
+            "description": "",
+            "disable_until": "0",
+            "error": "",
+            "errors_from": "0",
+            "flags": "0",
+            "host": "Template OS Linux",
+            "ipmi_authtype": "0",
+            "ipmi_available": "0",
+            "ipmi_disable_until": "0",
+            "ipmi_error": "",
+            "ipmi_errors_from": "0",
+            "ipmi_password": "",
+            "ipmi_privilege": "2",
+            "ipmi_username": "",
+            "jmx_available": "0",
+            "jmx_disable_until": "0",
+            "jmx_error": "",
+            "jmx_errors_from": "0",
+            "lastaccess": "0",
+            "maintenance_from": "0",
+            "maintenance_status": "0",
+            "maintenance_type": "0",
+            "maintenanceid": "0",
+            "name": "Template OS Linux",
+            "proxy_hostid": "0",
+            "snmp_available": "0",
+            "snmp_disable_until": "0",
+            "snmp_error": "",
+            "snmp_errors_from": "0",
+            "status": "3",
+            "templateid": "10001",
+            "tls_accept": "1",
+            "tls_connect": "1",
+            "tls_issuer": "",
+            "tls_psk": "",
+            "tls_psk_identity": "",
+            "tls_subject": ""
+        },
+        {
+            "available": "0",
+            "description": "",
+            "disable_until": "0",
+            "error": "",
+            "errors_from": "0",
+            "flags": "0",
+            "host": "Template OS Windows",
+            "ipmi_authtype": "0",
+            "ipmi_available": "0",
+            "ipmi_disable_until": "0",
+            "ipmi_error": "",
+            "ipmi_errors_from": "0",
+            "ipmi_password": "",
+            "ipmi_privilege": "2",
+            "ipmi_username": "",
+            "jmx_available": "0",
+            "jmx_disable_until": "0",
+            "jmx_error": "",
+            "jmx_errors_from": "0",
+            "lastaccess": "0",
+            "maintenance_from": "0",
+            "maintenance_status": "0",
+            "maintenance_type": "0",
+            "maintenanceid": "0",
+            "name": "Template OS Windows",
+            "proxy_hostid": "0",
+            "snmp_available": "0",
+            "snmp_disable_until": "0",
+            "snmp_error": "",
+            "snmp_errors_from": "0",
+            "status": "3",
+            "templateid": "10081",
+            "tls_accept": "1",
+            "tls_connect": "1",
+            "tls_issuer": "",
+            "tls_psk": "",
+            "tls_psk_identity": "",
+            "tls_subject": ""
+        }
+    ]
+}
+
+
+#######获取token的python脚本
+[root@cobbler-Zabbix ~]# vim zabbix_auth.py
+#!/usr/bin/env python
+#_*_ coding:utf-8 _*_
+
+import requests
+import json
+
+url = 'http://192.168.1.201/zabbix/api_jsonrpc.php'
+post_data = {
+        "jsonrpc": "2.0",
+        "method": "user.login",
+        "params": {
+                "user":"jackli",
+                "password":"Mu123"
+        },
+        "id": 1
+}
+post_header = {'Content-Type': 'application/json'}
+ret = requests.post(url, data=json.dumps(post_data),headers=post_header)
+
+zabbix_ret = json.loads(ret.text)
+if not zabbix_ret.has_key('result'):
+        print 'login error'
+else:
+        print zabbix_ret.get('result')
+#############
+
+##########用python添加zabbix agent主机
+[root@cobbler-Zabbix ~]# vim zabbix_host_create.py
+#!/usr/bin/env python
+#_*_ coding:utf-8 _*_
+
+import requests
+import json
+
+url = 'http://192.168.1.201/zabbix/api_jsonrpc.php'
+post_data = {
+"jsonrpc": "2.0",
+    "method": "host.create",
+    "params": {
+        "host": "Linux server",
+        "interfaces": [
+            {
+                "type": 1,
+                "main": 1,
+                "useip": 1,
+                "ip": "192.168.1.233",
+                "dns": "",
+                "port": "10050"
+            }
+        ],
+        "groups": [
+            {
+                "groupid": "2"
+            }
+        ],
+        "templates": [
+            {
+                "templateid": "10001"
+            }
+        ]
+ },
+    "auth": "bbacb5612a00a60a6da1d1d782f8c080",
+    "id": 1
+}
+post_header = {'Content-Type': 'application/json'}
+ret = requests.post(url, data=json.dumps(post_data),headers=post_header)
+
+zabbix_ret = json.loads(ret.text)
+print zabbix_ret
+#####################
+执行的结果：
+[root@cobbler-Zabbix ~]# python zabbix_host_create.py
+{u'jsonrpc': u'2.0', u'result': {u'hostids': [u'10132']}, u'id': 1}
+
 </pre>
 
+
+</pre>
 
 
 
