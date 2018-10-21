@@ -424,4 +424,359 @@ linux-node1:
 	3. minion配置文件写的  /etc/salt/minion
 	4. 自己写的   /srv/salt/_grains/
 注：当名字一样时，优先级从1到4排序
+
+#Pillar:
+Pillar是动态的。给特定的Minion指定特定的数据（top file也是这样的）。只有指定的minion自己能看到自己的数据，比较案例。而grains却是所有的minion都能看到，不安全。所以在普通的信息时用grains,而在涉及帐号密码时使用pillar。
+Pillar的所有item键值，在/etc/salt/master里面可以打开，例：
+893 # master config file that can then be used on minions.
+894 pillar_opts: True
+
+#####1. 写pillar sls描述文件：
+Pillar描述文件文件放在哪里？
+[root@SaltstackServer ~]# vim /etc/salt/master
+#####         Pillar settings        #####
+ 838 ##########################################
+ 839 # Salt Pillars allow for the building of global data that can be made selectively
+ 840 # available to different minions based on minion grain filtering. The Salt
+ 841 # Pillar is laid out in the same fashion as the file server, with environments,
+ 842 # a top file and sls files. However, pillar data does not need to be in the
+ 843 # highstate format, and is generally just key/value pairs.
+ 844 pillar_roots:
+ 845   base:
+ 846     - /srv/pillar
+打开pillar设置，并设置存放pillar描述文件URL
+cd /srv; mkdir pillar; cd pillar; mkdir web ;cd web ;vim apache.sls
+注：pillar里面可以嵌套grains
+[root@SaltstackServer /srv/pillar/web]# cat apache.sls 
+{% if grains['os'] == 'CentOS' %}
+apache: httpd
+{% elif grains['os'] == 'Debian' %}
+apache: apache2
+{% endif %}
+注：pillar不写top file文件是不能执行的，而grains不写top file也可以执行
+####2. 编写top file
+[root@SaltstackServer /srv]# cat ./pillar/top.sls 
+base:
+  'linux-node1':
+    - web.apache
+
+[root@SaltstackServer /srv]# salt '*' saltutil.refresh_pillar   #刷新pillar
+
+##查找pillar里面item是apache的key
+[root@SaltstackServer /srv]# salt '*' pillar.items apache
+SaltstackServer.com:
+    ----------
+    apache:
+linux-node1:
+    ----------
+    apache:
+        httpd
+
+###pillar使用场景，还是用于目标选择上，pillar用-I 来选择，grains用-G来选择，注意
+[root@SaltstackServer /srv]# salt -I 'apache:httpd' test.ping
+linux-node1:
+    True
+
+######Grains和Pillar对比：
+Grains:
+类型：静态（需要重启）
+数据采集方式：minion启动时采集
+应用场景：数据查询，目标选择，配置管理
+定义位置：minion端
+
+Pillar:
+类型：动态（不需要重启）
+数据采集方式：master自定义
+应用场景：目标选择，配置管理，机密数据
+定义位置：master端
+
+假如有100台机器：如果定义grains，那么需要在每台minion去设置，如果定义pillar,只需要在master一台机器上设置就可以了
+
+#########深入学习Saltstack远程执行：
+例如:salt '*' cmd.run 'w'
+命令：salt
+目标：'*'
+模块：cmd.run   #自带150+模块，也可自己写模块
+返回：执行后的结果返回，Returnners
+解析：
+目标：Targeting
+	两种：
+		1.和Minion ID 有关
+		2.和Minion ID 无关
+1.和Minion ID 有关
+#通配符：
+#[root@SaltstackServer ~]# salt 'linux?node1' test.ping
+linux-node1:
+    True
+#[root@SaltstackServer ~]# salt '*' test.ping
+SaltstackServer.com:
+    True
+linux-node1:
+    True
+#[root@SaltstackServer ~]# salt 'linux-node[1-2]' test.ping
+#列表：[root@SaltstackServer ~]# salt -L 'linux-node1,SaltstackServer.com' test.ping
+SaltstackServer.com:
+    True
+linux-node1:
+    True
+#正则表达式：
+[root@SaltstackServer ~]# salt -E 'linux-node[1-2]*' test.ping
+注：所有匹配目标的方式，都可以在Top file里面用
+
+主机名设置方案：
+1. IP地址
+2. 根据业务来进行设置
+例：redis-node1-redis04-idc04-soa.example.com
+redis-node1:redis第一个节点
+redis04:redis第4个集群
+idc04:idc机房
+soa:业务线
+examplo.com:域名
+
+#和Minion ID 无关：
+IP，子网：
+[root@SaltstackServer ~]# salt -S 192.168.1.233 test.ping
+linux-node1:
+    True
+[root@SaltstackServer ~]# salt -S 192.168.1.235 test.ping
+SaltstackServer.com:
+    True
+^[[A[root@SaltstackServer ~]# salt -S 192.168.1.0/24 test.ping
+SaltstackServer.com:
+    True
+linux-node1:
+    True
+#以百分比来执行远程命令，-b 10代表百分之10
+[root@SaltstackServer ~]# salt '*' -b 10 test.ping
+
+###官网模块URL：https://docs.saltstack.com/en/latest/ref/modules/all/index.html
+###常用模块：
+#network
+[root@SaltstackServer ~]# salt '*' network.arp
+SaltstackServer.com:
+    ----------
+    00:50:56:ad:60:3c:
+        192.168.1.233
+    08:62:66:c8:28:d0:
+        192.168.1.223
+    74:a2:e6:ab:42:c0:
+        192.168.1.254
+    f4:4e:05:65:4e:42:
+        192.168.1.1
+    fc:aa:14:b5:3b:a0:
+        192.168.1.19
+linux-node1:
+    ----------
+    00:50:56:ad:20:00:
+        192.168.1.201
+    00:50:56:ad:32:8c:
+        192.168.1.235
+    08:62:66:c8:28:d0:
+        192.168.1.223
+    74:a2:e6:ab:42:c0:
+        192.168.1.254
+    f4:4e:05:65:4e:42:
+        192.168.1.1
+    fc:aa:14:b5:3b:a0:
+        192.168.1.19
+#service
+[root@SaltstackServer ~]# salt '*' service.status sshd
+linux-node1:
+    True
+SaltstackServer.com:
+    True
+#cp（salt-cp）
+[root@SaltstackServer ~]# salt-cp '*' /etc/hosts /tmp/hi
+SaltstackServer.com:
+    ----------
+    /tmp/hi:
+        True
+linux-node1:
+    ----------
+    /tmp/hi:
+        True
+    -rw-------. 1 root root   0 Oct 20 13:54 yum.log
+[root@SaltstackServer ~]# salt '*' cmd.run 'ls -l /tmp/hi'
+SaltstackServer.com:
+    -rw-r--r-- 1 root root 158 Oct 21 14:11 /tmp/hi
+linux-node1:
+    -rw-r--r-- 1 root root 158 Oct 21 14:11 /tmp/hi
+#state
+salt '*' state.show_top   #查看目标minion在top file文件中需要做什么事
+[root@SaltstackServer ~]# salt '*' state.show_top
+SaltstackServer.com:
+    ----------
+linux-node1:
+    ----------
+    base:
+        - web.apache
+#手动执行安装模块：[root@SaltstackServer ~]# salt '*' state.single pkg.install name=lsof
+
+把minion的返回结果直接写到mysql,写到mysql的不是master写的，而是minion直接写的。因为Saltstack是python写的，minion又要写到mysql，所以minion要安装MYSQL-pyshon软件
+需要用到的模块：return
+[root@SaltstackServer ~]# salt '*' state.single pkg.installed name=MySQL-python
+linux-node1:
+----------
+          ID: MySQL-python
+    Function: pkg.installed
+      Result: True
+     Comment: The following packages were installed/updated: MySQL-python
+     Started: 14:35:25.672391
+    Duration: 5163.711 ms
+     Changes:   
+              ----------
+              MySQL-python:
+                  ----------
+                  new:
+                      1.2.5-1.el7
+                  old:
+
+Summary for linux-node1
+------------
+Succeeded: 1 (changed=1)
+Failed:    0
+------------
+Total states run:     1
+Total run time:   5.164 s
+SaltstackServer.com:
+----------
+          ID: MySQL-python
+    Function: pkg.installed
+      Result: True
+     Comment: The following packages were installed/updated: MySQL-python
+     Started: 14:35:25.687389
+    Duration: 5585.818 ms
+     Changes:   
+              ----------
+              MySQL-python:
+                  ----------
+                  new:
+                      1.2.5-1.el7
+                  old:
+
+Summary for SaltstackServer.com
+------------
+Succeeded: 1 (changed=1)
+Failed:    0
+------------
+Total states run:     1
+Total run time:   5.586 s
+
+#安装mariadb [root@SaltstackServer ~]# salt '*' state.single pkg.installed name=mariadb-sever
+返回结果到mysql参考URL：
+https://docs.saltstack.com/en/latest/ref/returners/all/salt.returners.mysql.html
+#############################在数据库上创建mysql表
+CREATE DATABASE  `salt`
+  DEFAULT CHARACTER SET utf8
+  DEFAULT COLLATE utf8_general_ci;
+
+USE `salt`;
+
+--
+-- Table structure for table `jids`
+--
+
+DROP TABLE IF EXISTS `jids`;
+CREATE TABLE `jids` (
+  `jid` varchar(255) NOT NULL,
+  `load` mediumtext NOT NULL,
+  UNIQUE KEY `jid` (`jid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+CREATE INDEX jid ON jids(jid) USING BTREE;
+
+--
+-- Table structure for table `salt_returns`
+--
+
+DROP TABLE IF EXISTS `salt_returns`;
+CREATE TABLE `salt_returns` (
+  `fun` varchar(50) NOT NULL,
+  `jid` varchar(255) NOT NULL,
+  `return` mediumtext NOT NULL,
+  `id` varchar(255) NOT NULL,
+  `success` varchar(10) NOT NULL,
+  `full_ret` mediumtext NOT NULL,
+  `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `id` (`id`),
+  KEY `jid` (`jid`),
+  KEY `fun` (`fun`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Table structure for table `salt_events`
+--
+
+DROP TABLE IF EXISTS `salt_events`;
+CREATE TABLE `salt_events` (
+`id` BIGINT NOT NULL AUTO_INCREMENT,
+`tag` varchar(255) NOT NULL,
+`data` mediumtext NOT NULL,
+`alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`master_id` varchar(255) NOT NULL,
+PRIMARY KEY (`id`),
+KEY `tag` (`tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+授权：
+grant all on salt.* to salt@'%' identified by 'salt@pw';
+##########################
+[root@SaltstackServer ~]# vim /etc/salt/minion
+#在所有minion上设置连接数据库参数
+mysql.host: '192.168.1.235'
+mysql.user: 'salt'
+mysql.pass: 'salt@pw'
+mysql.db: 'salt'
+mysql.port: 3306                                          
+[root@SaltstackServer ~]# systemctl restart salt-minion
+[root@SaltstackServer ~]# salt '*' test.ping --return mysql
+#查询到minion的返回结果：MariaDB [salt]> select * from salt_returns \G;
+MariaDB [salt]> select * from salt_returns \G;
+*************************** 1. row ***************************
+       fun: test.ping
+       jid: 20181021152047898888
+    return: true
+        id: SaltstackServer.com
+   success: 1
+  full_ret: {"fun_args": [], "jid": "20181021152047898888", "return": true, "retcode": 0, "success": true, "fun": "test.ping", "id": "SaltstackServer.com"}
+alter_time: 2018-10-21 15:20:47
+*************************** 2. row ***************************
+       fun: test.ping
+       jid: 20181021152047898888
+    return: true
+        id: linux-node1
+   success: 1
+  full_ret: {"fun_args": [], "jid": "20181021152047898888", "return": true, "retcode": 0, "success": true, "fun": "test.ping", "id": "linux-node1"}
+alter_time: 2018-10-21 15:20:48
+
+#如何编写一个状态模块：
+1. 模块放置位置：cd /srv/salt;mkdir _modules;vim my_disk.py
+2. 命名：文件名就是模块名：
+[root@SaltstackServer /srv/salt/_modules]# cat my_disk.py 
+def list():
+  cmd = 'df -h'
+  ret = __salt__['cmd.run'](cmd)
+  return ret
+3. 刷新
+[root@SaltstackServer /srv]# salt '*' saltutil.sync_modules
+linux-node1:
+SaltstackServer.com:
+4. 执行：
+[root@SaltstackServer /srv]# salt '*' my_disk.list
+SaltstackServer.com:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sda2        99G  1.6G   98G   2% /
+    devtmpfs        1.9G     0  1.9G   0% /dev
+    tmpfs           1.9G   28K  1.9G   1% /dev/shm
+    tmpfs           1.9G  8.9M  1.9G   1% /run
+    tmpfs           1.9G     0  1.9G   0% /sys/fs/cgroup
+    /dev/sda1      1014M  140M  875M  14% /boot
+    tmpfs           380M     0  380M   0% /run/user/0
+linux-node1:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sda2        99G  3.0G   96G   3% /
+    devtmpfs        909M     0  909M   0% /dev
+    tmpfs           920M   12K  920M   1% /dev/shm
+    tmpfs           920M   17M  903M   2% /run
+    tmpfs           920M     0  920M   0% /sys/fs/cgroup
+    /dev/sda1      1014M  140M  875M  14% /boot
+    tmpfs           184M     0  184M   0% /run/user/0
 </pre>
