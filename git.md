@@ -3,9 +3,9 @@
 
 ##一、Git简单操作
 ####输入帐户信息
-1. git config --global user.name "jackli5689"    --输入帐户名
+1. git config --global user.name "git-name"    --输入帐户名
 2. 
-git config --global user.email "595872348@qq.com"   ----输入邮箱名
+git config --global user.email "git-email"   ----输入邮箱名
 
 ####创建一个版本库和工作区
 1. $ mkdir learngit   --创建一个工作区为learngit目录
