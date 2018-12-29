@@ -694,6 +694,18 @@ import math语句表示导入math包，并允许后续代码引用math包里的s
 函数可以同时返回多个值，但其实就是一个tuple。
 
 ###函数的参数
+#位置参数
+我们先写一个计算x2的函数：
+def power(x):
+    return x * x
+对于power(x)函数，参数x就是一个位置参数。
+
+当我们调用power函数时，必须传入有且仅有的一个参数x：
+>>> power(5)
+25
+>>> power(15)
+225
+现在，如果我们要计算x3怎么办？可以再定义一个power3函数，但是如果要计算x4、x5……怎么办？我们不可能定义无限多个函数。
 你也许想到了，可以把power(x)修改为power(x, n)，用来计算xn，说干就干：
 def power(x, n):
     s = 1
@@ -782,155 +794,6 @@ Python函数在定义的时候，默认参数L的值就被计算出来了，即[
  ！！！！！！定义默认参数要牢记一点：默认参数必须指向不变对象！
 
 
-#函数的参数
-定义函数的时候，我们把参数的名字和位置确定下来，函数的接口定义就完成了。对于函数的调用者来说，只需要知道如何传递正确的参数，以及函数将返回什么样的值就够了，函数内部的复杂逻辑被封装起来，调用者无需了解。
-
-Python的函数定义非常简单，但灵活度却非常大。除了正常定义的必选参数外，还可以使用默认参数、可变参数和关键字参数，使得函数定义出来的接口，不但能处理复杂的参数，还可以简化调用者的代码。
-
-位置参数
-我们先写一个计算x2的函数：
-
-def power(x):
-    return x * x
-对于power(x)函数，参数x就是一个位置参数。
-
-当我们调用power函数时，必须传入有且仅有的一个参数x：
-
->>> power(5)
-25
->>> power(15)
-225
-现在，如果我们要计算x3怎么办？可以再定义一个power3函数，但是如果要计算x4、x5……怎么办？我们不可能定义无限多个函数。
-
-你也许想到了，可以把power(x)修改为power(x, n)，用来计算xn，说干就干：
-
-def power(x, n):
-    s = 1
-    while n > 0:
-        n = n - 1
-        s = s * x
-    return s
-对于这个修改后的power(x, n)函数，可以计算任意n次方：
-
->>> power(5, 2)
-25
->>> power(5, 3)
-125
-修改后的power(x, n)函数有两个参数：x和n，这两个参数都是位置参数，调用函数时，传入的两个值按照位置顺序依次赋给参数x和n。
-
-默认参数
-新的power(x, n)函数定义没有问题，但是，旧的调用代码失败了，原因是我们增加了一个参数，导致旧的代码因为缺少一个参数而无法正常调用：
-
->>> power(5)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-TypeError: power() missing 1 required positional argument: 'n'
-Python的错误信息很明确：调用函数power()缺少了一个位置参数n。
-
-这个时候，默认参数就排上用场了。由于我们经常计算x2，所以，完全可以把第二个参数n的默认值设定为2：
-
-def power(x, n=2):
-    s = 1
-    while n > 0:
-        n = n - 1
-        s = s * x
-    return s
-这样，当我们调用power(5)时，相当于调用power(5, 2)：
-
->>> power(5)
-25
->>> power(5, 2)
-25
-而对于n > 2的其他情况，就必须明确地传入n，比如power(5, 3)。
-
-从上面的例子可以看出，默认参数可以简化函数的调用。设置默认参数时，有几点要注意：
-
-一是必选参数在前，默认参数在后，否则Python的解释器会报错（思考一下为什么默认参数不能放在必选参数前面）；
-
-二是如何设置默认参数。
-
-当函数有多个参数时，把变化大的参数放前面，变化小的参数放后面。变化小的参数就可以作为默认参数。
-
-使用默认参数有什么好处？最大的好处是能降低调用函数的难度。
-
-举个例子，我们写个一年级小学生注册的函数，需要传入name和gender两个参数：
-
-def enroll(name, gender):
-    print('name:', name)
-    print('gender:', gender)
-这样，调用enroll()函数只需要传入两个参数：
-
->>> enroll('Sarah', 'F')
-name: Sarah
-gender: F
-如果要继续传入年龄、城市等信息怎么办？这样会使得调用函数的复杂度大大增加。
-
-我们可以把年龄和城市设为默认参数：
-
-def enroll(name, gender, age=6, city='Beijing'):
-    print('name:', name)
-    print('gender:', gender)
-    print('age:', age)
-    print('city:', city)
-这样，大多数学生注册时不需要提供年龄和城市，只提供必须的两个参数：
-
->>> enroll('Sarah', 'F')
-name: Sarah
-gender: F
-age: 6
-city: Beijing
-只有与默认参数不符的学生才需要提供额外的信息：
-
-enroll('Bob', 'M', 7)
-enroll('Adam', 'M', city='Tianjin')
-可见，默认参数降低了函数调用的难度，而一旦需要更复杂的调用时，又可以传递更多的参数来实现。无论是简单调用还是复杂调用，函数只需要定义一个。
-
-有多个默认参数时，调用的时候，既可以按顺序提供默认参数，比如调用enroll('Bob', 'M', 7)，意思是，除了name，gender这两个参数外，最后1个参数应用在参数age上，city参数由于没有提供，仍然使用默认值。
-
-也可以不按顺序提供部分默认参数。当不按顺序提供部分默认参数时，需要把参数名写上。比如调用enroll('Adam', 'M', city='Tianjin')，意思是，city参数用传进去的值，其他默认参数继续使用默认值。
-
-默认参数很有用，但使用不当，也会掉坑里。默认参数有个最大的坑，演示如下：
-
-先定义一个函数，传入一个list，添加一个END再返回：
-
-def add_end(L=[]):
-    L.append('END')
-    return L
-当你正常调用时，结果似乎不错：
-
->>> add_end([1, 2, 3])
-[1, 2, 3, 'END']
->>> add_end(['x', 'y', 'z'])
-['x', 'y', 'z', 'END']
-当你使用默认参数调用时，一开始结果也是对的：
-
->>> add_end()
-['END']
-但是，再次调用add_end()时，结果就不对了：
-
->>> add_end()
-['END', 'END']
->>> add_end()
-['END', 'END', 'END']
-很多初学者很疑惑，默认参数是[]，但是函数似乎每次都“记住了”上次添加了'END'后的list。
-
-原因解释如下：
-Python函数在定义的时候，默认参数L的值就被计算出来了，即[]，因为默认参数L也是一个变量，它指向对象[]，每次调用该函数，如果改变了L的内容，则下次调用时，默认参数的内容就变了，不再是函数定义时的[]了。
-
-！！！！定义默认参数要牢记一点：默认参数必须指向不变对象！
-
-要修改上面的例子，我们可以用None这个不变对象来实现：
-def add_end(L=None):
-    if L is None:
-        L = []
-    L.append('END')
-    return L
-现在，无论调用多少次，都不会有问题：
-
->>> add_end()
-['END']
->>> add_end()
-['END']
 为什么要设计str、None这样的不变对象呢？因为不变对象一旦创建，对象内部的数据就不能修改，这样就减少了由于修改数据导致的错误。此外，由于对象不变，多任务环境下同时读取对象不需要加锁，同时读一点问题都没有。我们在编写程序时，如果可以设计一个不变对象，那就尽量设计成不变对象。
 
 ###可变参数
@@ -1322,6 +1185,13 @@ def fib(max):
 3
 5
 8
+注意，赋值语句：
+a, b = b, a + b
+相当于：
+t = (b, a + b) # t是一个tuple
+a = t[0]
+b = t[1]
+但不必显式写出临时变量t就可以赋值。
 但是用for循环调用generator时，发现拿不到generator的return语句的返回值。如果想要拿到返回值，必须捕获StopIteration错误，返回值包含在StopIteration的value中：
 >>> g = fib(6)
 >>> g
@@ -1394,60 +1264,9 @@ StopIteration
 所以，我们创建了一个generator后，基本上永远不会调用next()，而是通过for循环来迭代它，并且不需要关心StopIteration的错误。
 
 generator非常强大。如果推算的算法比较复杂，用类似列表生成式的for循环无法实现的时候，还可以用函数来实现。
-
-比如，著名的斐波拉契数列（Fibonacci），除第一个和第二个数外，任意一个数都可由前两个数相加得到：
-
-1, 1, 2, 3, 5, 8, 13, 21, 34, ...
-
-斐波拉契数列用列表生成式写不出来，但是，用函数把它打印出来却很容易：
-
-def fib(max):
-    n, a, b = 0, 0, 1
-    while n < max:
-        print(b)
-        a, b = b, a + b
-        n = n + 1
-    return 'done'
-注意，赋值语句：
-
-a, b = b, a + b
-相当于：
-
-t = (b, a + b) # t是一个tuple
-a = t[0]
-b = t[1]
-但不必显式写出临时变量t就可以赋值。
-
-上面的函数可以输出斐波那契数列的前N个数：
-
->>> fib(6)
-1
-1
-2
-3
-5
-8
-'done'
-仔细观察，可以看出，fib函数实际上是定义了斐波拉契数列的推算规则，可以从第一个元素开始，推算出后续任意的元素，这种逻辑其实非常类似generator。
-
-也就是说，上面的函数和generator仅一步之遥。要把fib函数变成generator，只需要把print(b)改为yield b就可以了：
-
-def fib(max):
-    n, a, b = 0, 0, 1
-    while n < max:
-        yield b
-        a, b = b, a + b
-        n = n + 1
-    return 'done'
-这就是定义generator的另一种方法。如果一个函数定义中包含yield关键字，那么这个函数就不再是一个普通函数，而是一个generator：
-
->>> f = fib(6)
->>> f
-<generator object fib at 0x104feaaa0>
 这里，最难理解的就是generator和函数的执行流程不一样。函数是顺序执行，遇到return语句或者最后一行函数语句就返回。而变成generator的函数，在每次调用next()的时候执行，遇到yield语句返回，再次执行时从上次返回的yield语句处继续执行。
 
 举个简单的例子，定义一个generator，依次返回数字1，3，5：
-
 def odd():
     print('step 1')
     yield 1
@@ -1472,38 +1291,6 @@ Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
 StopIteration
 可以看到，odd不是普通函数，而是generator，在执行过程中，遇到yield就中断，下次又继续执行。执行3次yield后，已经没有yield可以执行了，所以，第4次调用next(o)就报错。
-
-回到fib的例子，我们在循环过程中不断调用yield，就会不断中断。当然要给循环设置一个条件来退出循环，不然就会产生一个无限数列出来。
-
-同样的，把函数改成generator后，我们基本上从来不会用next()来获取下一个返回值，而是直接使用for循环来迭代：
-
->>> for n in fib(6):
-...     print(n)
-...
-1
-1
-2
-3
-5
-8
-但是用for循环调用generator时，发现拿不到generator的return语句的返回值。如果想要拿到返回值，必须捕获StopIteration错误，返回值包含在StopIteration的value中：
-
->>> g = fib(6)
->>> while True:
-...     try:
-...         x = next(g)
-...         print('g:', x)
-...     except StopIteration as e:
-...         print('Generator return value:', e.value)
-...         break
-...
-g: 1
-g: 1
-g: 2
-g: 3
-g: 5
-g: 8
-Generator return value: done
 
 ###小结
 generator是非常强大的工具，在Python中，可以简单地把列表生成式改成generator，也可以通过函数实现复杂逻辑的generator。
@@ -1876,11 +1663,8 @@ functools.partial就是帮助我们创建一个偏函数的，不需要我们自
 
 创建偏函数时，实际上可以接收函数对象、*args和**kw这3个参数，当传入：
 int2 = functools.partial(int, base=2)
-实际上固定了int()函数的关键字参数base，也就是：
-int2('10010')
-相当于：
+实际上固定了int()函数的关键字参数base，也就是相当于：
 kw = { 'base': 2 }
-int('10010', **kw)
 当传入：
 max2 = functools.partial(max, 10)
 实际上会把10作为*args的一部分自动加到左边，也就是：
@@ -2144,15 +1928,11 @@ a.print_score()
 a.set_score(100)
 print(a._Student__score)
 ###################################
-但是强烈建议你不要这么干，因为不同版本的Python解释器可能会把__name改成不同的变量名。
+
 总的来说就是，Python本身没有任何机制阻止你干坏事，一切全靠自觉。
 
 #3.继承和多态
 在OOP程序设计中，当我们定义一个class的时候，可以从某个现有的class继承，新的class称为子类（Subclass），而被继承的class称为基类、父类或超类（Base class、Super class）。
-比如，我们已经编写了一个名为Animal的class，有一个run()方法可以直接打印：
-class Animal(object):
-    def run(self):
-        print('Animal is running...')
 比如，我们已经编写了一个名为Animal的class，有一个run()方法可以直接打印：
 class Animal(object):
     def run(self):
@@ -2173,6 +1953,8 @@ True
 >>> isinstance(b, Animal)
 True
 >>> isinstance(c, Dog)
+True
+>>> isinstance(c, Animal）
 True
 看来c不仅仅是Dog，c还是Animal！
 不过仔细想想，这是有道理的，因为Dog是从Animal继承下来的，当我们创建了一个Dog的实例c时，我们认为c的数据类型是Dog没错，但c同时也是Animal也没错，Dog本来就是Animal的一种！
@@ -2423,7 +2205,6 @@ AttributeError: 'Student' object has no attribute 'set_age'
 >>> s2.score
 99
 通常情况下，上面的set_score方法可以直接定义在class中，但动态绑定允许我们在程序运行的过程中动态给class加上功能，这在静态语言中很难实现。
-#使用__slots__
 但是，如果我们想要限制实例的属性怎么办？比如，只允许对Student实例添加name和age属性。
 为了达到限制的目的，Python允许在定义class的时候，定义一个特殊的__slots__变量，来限制该class实例能添加的属性：
 class Student(object):
@@ -2444,6 +2225,8 @@ AttributeError: 'Student' object has no attribute 'score'
 >>> g = GraduateStudent()
 >>> g.score = 9999
 除非在子类中也定义__slots__，这样，子类实例允许定义的属性就是自身的__slots__加上父类的__slots__。
+
+###使用@property
 
 
 
