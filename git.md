@@ -106,7 +106,7 @@ index 76d770f..a9c5755 100644
 
 ####撤销修改：
 * 场景1：当你改乱了工作区某个文件的内容，想直接丢弃工作区的修改时，用命令git checkout -- file。
-* 场景2：当你不但改乱了工作区某个文件的内容，还添加到了暂存区时，想丢弃修改，分两步，第一步用命令git reset HEAD file，就回到了场景1，第二步按场景1操作。(前提是已经提交过一次了)
+* 场景2：当你不但改乱了工作区某个文件的内容，还添加到了暂存区时，想丢弃修改，分两步，第一步用命令git reset HEAD <file>，就回到了场景1，第二步按场景1操作。
 * 场景3：已经提交了不合适的修改到版本库时，想要撤销本次提交，参考版本回退一节，不过前提是没有推送到远程库
 
 ####删除文件：
@@ -236,99 +236,13 @@ Deleted branch dev (was b17d20e).
 删除后，查看branch，就只剩下master分支了：
 $ git branch
 * master
+* 因为创建、合并和删除分支非常快，所以Git鼓励你使用分支完成某个任务，合并后再删掉分支，这和直接在master分支上工作效果是一样的，但过程更安全。
 </pre>
 
 分支小结:
 创建与合并分支
-阅读: 999235
 在版本回退里，你已经知道，每次提交，Git都把它们串成一条时间线，这条时间线就是一个分支。截止到目前，只有一条时间线，在Git里，这个分支叫主分支，即master分支。HEAD严格来说不是指向提交，而是指向master，master才是指向提交的，所以，HEAD指向的就是当前分支。
 
-一开始的时候，master分支是一条线，Git用master指向最新的提交，再用HEAD指向master，就能确定当前分支，以及当前分支的提交点：
-
-git-br-initial
-
-每次提交，master分支都会向前移动一步，这样，随着你不断提交，master分支的线也越来越长：
-
- 当我们创建新的分支，例如dev时，Git新建了一个指针叫dev，指向master相同的提交，再把HEAD指向dev，就表示当前分支在dev上：
-
-git-br-create
-
-你看，Git创建一个分支很快，因为除了增加一个dev指针，改改HEAD的指向，工作区的文件都没有任何变化！
-
-不过，从现在开始，对工作区的修改和提交就是针对dev分支了，比如新提交一次后，dev指针往前移动一步，而master指针不变：
-
-git-br-dev-fd
-
-假如我们在dev上的工作完成了，就可以把dev合并到master上。Git怎么合并呢？最简单的方法，就是直接把master指向dev的当前提交，就完成了合并：
-
-git-br-ff-merge
-
-所以Git合并分支也很快！就改改指针，工作区内容也不变！
-
-合并完分支后，甚至可以删除dev分支。删除dev分支就是把dev指针给删掉，删掉后，我们就剩下了一条master分支：
-
-git-br-rm
-
-真是太神奇了，你看得出来有些提交是通过分支完成的吗？
-
- 下面开始实战。
-
-首先，我们创建dev分支，然后切换到dev分支：
-
-$ git checkout -b dev
-Switched to a new branch 'dev'
-git checkout命令加上-b参数表示创建并切换，相当于以下两条命令：
-
-$ git branch dev
-$ git checkout dev
-Switched to branch 'dev'
-然后，用git branch命令查看当前分支：
-
-$ git branch
-* dev
-  master
-git branch命令会列出所有分支，当前分支前面会标一个*号。
-
-然后，我们就可以在dev分支上正常提交，比如对readme.txt做个修改，加上一行：
-Creating a new branch is quick.
-然后提交：
-
-$ git add readme.txt 
-$ git commit -m "branch test"
-[dev b17d20e] branch test
- 1 file changed, 1 insertion(+)
-现在，dev分支的工作完成，我们就可以切换回master分支：
-
-$ git checkout master
-Switched to branch 'master'
-切换回master分支后，再查看一个readme.txt文件，刚才添加的内容不见了！因为那个提交是在dev分支上，而master分支此刻的提交点并没有变：
-
-git-br-on-master
-
-现在，我们把dev分支的工作成果合并到master分支上：
-
-$ git merge dev
-
-Updating d46f35e..b17d20e
-Fast-forward
- readme.txt | 1 +
- 1 file changed, 1 insertion(+)
-git merge命令用于合并指定分支到当前分支。合并后，再查看readme.txt的内容，就可以看到，和dev分支的最新提交是完全一样的。
-
-注意到上面的Fast-forward信息，Git告诉我们，这次合并是“快进模式”，也就是直接把master指向dev的当前提交，所以合并速度非常快。
-
-当然，也不是每次合并都能Fast-forward，我们后面会讲其他方式的合并。
-
-合并完成后，就可以放心地删除dev分支了：
-<pre>
-$ git branch -d dev
-Deleted branch dev (was b17d20e).
-删除后，查看branch，就只剩下master分支了：
-</pre>
-
-$ git branch
-* master
-因为创建、合并和删除分支非常快，所以Git鼓励你使用分支完成某个任务，合并后再删掉分支，这和直接在master分支上工作效果是一样的，但过程更安全。
 
 **小结**
 
@@ -368,7 +282,7 @@ $ git log --graph --pretty=oneline --abbrev-commit
 </pre>
 小结
 
-当混帐无法自动合并分支时，就必须首先解决冲突。解决冲突后，再提交，合并完成。
+当git无法自动合并分支时，就必须首先解决冲突。解决冲突后，再提交，合并完成。
 
 解决冲突就是把Git的合并失败的文件手动编辑为我们希望的内容，再提交。
 
@@ -425,7 +339,7 @@ Git分支十分强大，在团队开发中应该充分应用。
 ###错误分支
 <pre>
 git stash    --保存当前的工作状态，等需要时可拿出来，
-原计划两个小时的缺陷修复只花了5分钟！现在，时候的英文接着回到dev分支干活了！
+原计划两个小时的缺陷修复只花了5分钟！现在接着回到dev分支干活了！
 
 $ git checkout dev
 Switched to branch 'dev'
@@ -478,10 +392,9 @@ git push origin --delete branchname   --删除远端分支
 
 ####多人协作
 <pre>
-当你从远程仓库克隆时，实际上Git的自动把本地的master分支远程状语从句：的master分支对应起来了，并且，远程仓库的默认名称是origin。
+当你从远程仓库克隆时，实际上Git自动把本地的master分支和远程master分支对应起来了，并且，远程仓库的默认名称是origin。
 
 要查看远程库的信息，用git remote：
-
 $ git remote
 origin
 或者，用git remote -v显示更详细的信息：
@@ -489,7 +402,7 @@ origin
 $ git remote -v
 origin  git@github.com:michaelliao/learngit.git (fetch)
 origin  git@github.com:michaelliao/learngit.git (push)
-显示上面可以了状语从句：抓取推送的origin的地址。如果没有推送权限，就看不到推的地址。
+显示上面抓取推送的origin的地址。如果没有推送权限，就看不到推的地址。
 </pre>
 
 #####推送分支
@@ -510,43 +423,10 @@ dev分支是开发分支，团队所有成员都需要在上面工作，所以�
 
 设有分支是否推到远程，取决于你是否和你的小伙伴合作在上面开发。
 
-
-多人协作
-
-当你从远程仓库克隆时，实际上Git的把自动本地的master分支远程状语从句：的master分支对应起来了，并且，远程仓库的默认名称是origin。
-
-要查看远程库的信息，用git remote：
-
-$ git remote
-origin
-或者，用git remote -v显示更详细的信息：
-
-$ git remote -v
-origin  git@github.com:michaelliao/learngit.git (fetch)
-origin  git@github.com:michaelliao/learngit.git (push)
-显示上面可以了状语从句：抓取推送的origin的地址。如果没有推送权限，就看不到推的地址。
-
-推送分支
-推送分支，就是把该分支上的所有本地提交推送到远程库推送时，要指定本地分支，这样，Git的就会把该分支推送到远程库对应的远程分支上：
-
-$ git push origin master
-如果要推送其他分支，比如dev，就改成：
-
-$ git push origin dev
-但是，并不是一定要把本地分支往远程推送，那么，哪些分支需要推送，哪些不需要呢？
-
-master分支是主分支，因此要时刻与远程同步;
-
-dev分支是开发分支，团队所有成员都需要在上面工作，所以也需要与远程同步;
-
-错误分支只用于在本地修复错误，就没必要推到远程了，除非老板要看看你每周到底修复了几个错误;
-
-设有分支是否推到远程，取决于你是否和你的小伙伴合作在上面开发。
-
 总之，就是在混帐中，分支完全可以在本地自己藏着玩，是否推送，视你的心情而定！
 
 抓取分支
-多人协作时，都会大家往master状语从句：dev分支上推送各自的修改。
+多人协作时，都会大家往master和dev分支上推送各自的修改。
 
 现在，模拟一个你的小伙伴，可以在另一台电脑（注意要把SSH Key添加到GitHub）或者同一台电脑的另一个目录下克隆：
 
@@ -557,15 +437,14 @@ remote: Compressing objects: 100% (21/21), done.
 remote: Total 40 (delta 14), reused 40 (delta 14), pack-reused 0
 Receiving objects: 100% (40/40), done.
 Resolving deltas: 100% (14/14), done.
-当你的小伙伴从远程库的克隆时，默认情况下，的你小伙伴只能看到本地的master分支不信可以用。git branch命令看看：
+当你的小伙伴从远程库的克隆时，默认情况下，你的小伙伴只能看到本地的master分支，不信可以用git branch命令看看：
 
 $ git branch
 * master
-现在，的你小伙伴要在dev分支上开发，必须就创建³³远程origin的dev分支到本地，他于是用这个命令创建³³本地dev分支：
-
+现在，你的小伙伴要在dev分支上开发，必须就创建远程origin的dev分支到本地，他于是用这个命令创建本地dev分支：
 $ git checkout -b dev origin/dev
-现在，就他在可以dev上继续修改，然后，地时不时把dev分支push到远程：
 
+现在，他就可以在dev上继续修改，然后，时不时地把dev分支push到远程：
 $ git add env.txt
 
 $ git commit -m "add env"
@@ -613,34 +492,17 @@ See git-pull(1) for details.
 If you wish to set tracking information for this branch you can do so with:
 
     git branch --set-upstream-to=origin/<branch> dev
-git pull也失败了，的英文原因没有指定本地dev分支与远程origin/dev分支的链接，根据提示，设置dev状语从句：origin/dev的链接：
+git pull也失败了，原因没有指定本地dev分支与远程origin/dev分支的链接，根据提示，设置dev状语从句：origin/dev的链接：
 
 $ git branch --set-upstream-to=origin/dev dev
 Branch 'dev' set up to track remote branch 'dev' from 'origin'.
 再拉：
 
 $ git pull
-fatal: refusing to merge unrelated histories
-
-$ git pull origin master --allow-unrelated-histories
-From github.com:jackli5689/job
- * branch            master     -> FETCH_HEAD
-Merge made by the 'recursive' strategy.
- Cobbler.md | 335 +++++++++++++++++++++++++++++++
- Python.md  |  10 +
- Zabbix.md  | 541 +++++++++++++++++++++++++++++++++++++++++++++++++
- git.md     | 663 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 1549 insertions(+)
- create mode 100644 Cobbler.md
- create mode 100644 Python.md
- create mode 100644 Zabbix.md
- create mode 100644 git.md
-
-$ git pull
 Auto-merging env.txt
 CONFLICT (add/add): Merge conflict in env.txt
 Automatic merge failed; fix conflicts and then commit the result.
-回这git pull成功，但是合并有冲突，需要手动解决，的解决方法状语从句：分支管理中的解决冲突完全一样解决后，提交，再推动。：
+回这git pull成功，但是合并有冲突，需要手动解决，解决的方法：分支管理中的冲突完全一样解决后，提交，再推动：
 
 $ git commit -m "fix env conflict"
 [dev 57c53ab] fix env conflict
