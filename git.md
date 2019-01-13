@@ -502,7 +502,7 @@ $ git pull
 Auto-merging env.txt
 CONFLICT (add/add): Merge conflict in env.txt
 Automatic merge failed; fix conflicts and then commit the result.
-回这git pull成功，但是合并有冲突，需要手动解决，解决的方法：分支管理中的冲突完全一样解决后，提交，再推动：
+这回git pull成功，但是合并有冲突，需要手动解决，解决的方法：分支管理中的冲突完全一样解决后，提交，再推动：
 
 $ git commit -m "fix env conflict"
 [dev 57c53ab] fix env conflict
@@ -539,4 +539,63 @@ To github.com:michaelliao/learngit.git
 建立本地分支和远程分支的关联，使用git branch --set-upstream branch-name origin/branch-name;
 
 从远程抓取分支，使用git pull，如果有冲突，要先处理冲突。
+</pre>
+
+<pre>
+##简要步骤
+####输入帐户信息
+1. git config --global user.name "git-name"    --输入帐户名
+2. git config --global user.email "git-email"   ----输入邮箱名
+3. $ mkdir learngit   --创建一个工作区为learngit目录
+4. $ cd learngit ;  $ git init  --初始化learngit目录，使目录下生成.git子目录,.git子目录为版本库，版本库不可随意更改
+5. git add readme.txt  --用命令git add告诉Git，把推送数据到远程库
+6. git commit -m "wrote a readme file"   --提交到仓库，并添加提交的文件说明
+7. git push origin master  --推送分支
+8. git log    --用此命令查看提交的记录日志 
+9. git log  --pretty=oneline
+10. git reset --hard HEAD^   --回到上一次提交的版本
+11. git reset --hard 1094a`  --回到指定的id版本
+12. git reflog  --关掉了电脑可用此命令查看日志
+13. git diff HEAD -- readme.txt命令可以查看工作区和版本库里面最新版本的区别
+14. git checkout -- file  --当你改乱了工作区某个文件的内容，想直接丢弃工作区的修改,可使用指命令回到上一次提交（commit）的版本状态，首先你得提交过版本
+15. git reset HEAD <file>当你不但改乱了工作区某个文件的内容，还添加到了暂存区时，想丢弃修改，分两步，第一步用命令git reset HEAD <file>，就回到了场景1，第二步按场景1操作。
+16. ##将本地库添加到远程库
+1. 首先用ssh-keygen -t rsa 生成用户密钥，然后把生成的公钥信息复制添加到你的github网站帐户上，路径：your profile---edit profile---SSH and GPG keys---New SSH keys
+2. 使用命令：连接远程github帐户:
+	<pre>git remote add origin git@github.com:jackli5689/learngit.git
+	git remote add origin https://github.com/jackli5689/learngit.git
+	-----两种方法都可以，ssh协议比http协议更快
+17. git clone git@github.com:jackli5689/gitskiils.git  --克隆仓库
+18. 当你直接使用git rm test.txt删除远程库的内容时，这时不会直接更新，当你在下次git push origin master时才会触发更新
+19. git checkout -b dev --创建分支并切换分支
+20. git branch  --查看当前分支
+21. git branch dev  --新建分支
+22. git checkout dev  --切换分支
+23. git merge dev  --合并分支，合并其他分支的工作内容到当前分支
+24. git branch -d dev --删除分支
+25. ###解决冲突：当git无法自动合并分支时，就必须首先解决冲突。解决冲突后，再提交，合并完成。
+26. 通常，合并分支时，如果可能，Git会用Fast forward模式，但这种模式下，删除分支后，会丢掉分支信息。
+如果要强制禁用Fast forward模式，Git就会在merge时生成一个新的commit，这样，从分支历史上就可以看出分支信息
+27. git merge --no-ff -m "merge with no-ff" dev  --准备合并dev分支，请注意--no-ff参数，表示禁用Fast forward，因为本次合并要创建一个新的commit，所以加上-m参数，把commit描述写进去。
+28.###错误分支
+ 1. git stash    --保存当前的工作状态，等需要时可拿出来，
+ 2.  git checkout dev  --切换分支
+ 3. git status  --回到之前的分支，找回保存的工作状态
+ 4. git stash list --列出保存的工作状态
+ 5. git stash apply --恢复，但是恢复后，藏匿内容并不删除，需要你用git stash drop来删除
+ 6. git stash pop --恢复的同时把藏匿内容也删了
+28. git remote --查看远程库的信息
+29. git remote -v  --查看详细远程库的信息
+30. git pull --用git pull把最新的提交从origin/dev抓下来，然后，在本地合并，解决冲突，再推送
+31. git branch --set-upstream-to=origin/dev dev  -------git pull也失败了，原因没有指定本地dev分支与远程origin/dev分支的链接，根据提示，设置dev状语从句：origin/dev的链接
+32. git pull   ---这git pull成功，但是合并有冲突，需要手动解决，解决的方法：分支管理中的冲突完全一样解决后，提交，再推动
+
+
+####多人协作流程
+* 因此，多人协作的工作模式通常是这样：
+* 首先，试图可以用git push origin <branch-name>推送自己的修改;
+如果推送失败，则因为远程分支比你的本地更新，先需要用git pull试图合并;
+* 如果合并有冲突，则解决冲突，并在本地提交;
+* 没有冲突或者解决掉冲突后，再用git push origin <branch-name>推送就能成功！
+* 如果git pull提示no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令git branch --set-upstream-to <branch-name> origin/<branch-name>。
 </pre>
