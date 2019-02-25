@@ -541,6 +541,24 @@ To github.com:michaelliao/learngit.git
 从远程抓取分支，使用git pull，如果有冲突，要先处理冲突。
 </pre>
 
+##标签
+<pre>
+新建标签：
+git tag v1.0 #新建标签v1.0到最新提交的commit-id上
+git tag  #用命令git tag查看所有标签,默认标签是打在最新提交的commit上的.
+git show v0.9  #可以用git show <tagname>查看标签信息,标签不是按时间顺序列出，而是按字母排序的。
+git tag -a v0.1 -m "version 0.1 released" 1094adb #可以创建带有说明的标签，用-a指定标签名，-m指定说明文字
+git tag -d v1.0  #删除指定标签
+git tag v0.9 commid-id  #打标签到指定的commit-id上
+管理标签：
+git push origin v1.0  #推送标签到仓库
+git push origin --tags  #推送本地所有标签
+如果标签已经推送到远程，要删除远程标签就麻烦一点，先从本地删除：
+git tag -d v1.0  #先从本地删除v1.0
+git push origin :refs/tags/v1.0  #然后，从远程删除。删除命令也是push
+要看看是否真的从远程库删除了标签，可以登陆GitHub查看。
+</pre>
+
 <pre>
 ##简要步骤
 ####输入帐户信息
