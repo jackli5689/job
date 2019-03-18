@@ -1,1 +1,1 @@
-﻿https://github.com/jackli5689/job/raw/master/docker.jpg
+﻿https://github.com/jackli5689/job/blob/master/docker.jpg
