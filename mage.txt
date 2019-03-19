@@ -1,0 +1,94 @@
+常见请求方法：
+GET：获取服务器资源到本地的
+POST：从本地把资源写入到服务器的
+HEAD：首部
+PUT：从远端服务器下载文件到本地的
+DELETE：从远端服务器删除文件的
+TRACE
+OPTIONS
+CONNECTION
+
+SMTP:多用途互联网邮件扩展
+	MIME协议
+HTTP:使用Base64协议（引入MIME协议）
+
+什么是动态网页？
+动态网页是由客户端请求生成的，是非HTML格式的文件，是编程语言开发的脚本，脚本接收客户端参数后在服务器运行一次，并相对应的生成一个HTML文件发送给请求的客户端
+
+web服务器处理客户端的动态网页请求时，不是web服务器生成html文件，而web服务器通过协议去调用相对应的脚本解释器去，解释器执行并生成html文件，并返回给web服务器发送给客户端。
+动态网页：包含静态内容（图片等，不需要运行解释器）和动态内容（只有动态内容才需要运行解释器生成html）
+
+阻塞：一直等待
+非阻塞：就是轮循
+无论是阻塞还是非阻塞都会接收客户端的请求，我们称阻塞或非阻塞在等待客户端请求时为监听
+
+数据包
+IP协议：源IP,目标IP
+TCP协议：源端口，目标端口
+HTTP首部：GET /2.html(什么方法，URL),Host: www.magedu.com(虚拟主机)
+HTTP报文：请求报文，响应报文
+请求报文语法：
+-------------------------------
+<method><request_URL><version>
+<headers>
+			
+<entity-body> 
+-------------------------------
+<method>：请求的方法
+<request_URL>:请求URL
+<version>：http版本，http/1.0
+<headers>：什么格式，什么类型的web对象
+<entity-body>：报文主体
+响应报文：
+-------------------------------
+<version><status><reason-phrase>
+<headers>
+			
+<entity-body> 
+-------------------------------
+<version>：http版本，http/1.0
+<status>:状态代码：1xx(纯信息)，2xx(成功类的信息，200),3xx(重定向类的信息，301，302，304),4xx(客户端错误类信息，404),5xx(服务器端错误类信息，501)
+<reason-phrase>：进一步解释status的意义的
+<headers>：什么格式，什么类型的web对象
+<entity-body>：报文主体
+
+请求报文例子：
+GET / HTTP/1.1  #GET方式，默认主页
+Host: www.magedu.com  #首部，名称及其值
+Connection: keep-alive   #首部，名称及其值
+
+
+响应报文例子：
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.2.17
+Vary: Accept-Encoding,Cookie,User-Agent
+Cache-Control: max-age=3,must-revalidata
+Cotent-Encoding: gzip
+Content-Length: 6931
+
+原生态的web服务器主要操作（不会操作动态内容的）：
+1.建立连接——接受或拒绝客户端连接请求
+2.接收请求——通过网络读取HTTP请求报文
+3.处理请求——解析请求报文并做出相应的动作
+4.访问资源——访问请求报文中相关的资源
+5.构建响应——使用正确的首部生成HTTP响应报文
+6.发送响应——向客户端发送生成的响应报文
+7.记录日志——当已经完成的http事务记录进日志文件
+
+一个页面：10image,3css,5html,总共有18个资源
+一个页面18个资源18个请求
+http每个请求都是tcp协议的，三次握手，四次分手（说明了服务器压力很大，所以缓存是很有用的）
+
+http/1.1：
+增强了缓存的功能
+长连接（减少三次握手的机会）:空闲超时，连接次数
+
+四种模型：
+1.单进程 2.多进程 3.单进程多请求 4.多进程多请求（最先进）
+httpd,MPM模型:prefork,work,event
+
+Client:IE,Firefox,Chrome,Opera,Safari
+Server:Apache-httpd,IIS,nginx,lighttpd,thttpd
+应用程序服务器（是web服务器也是解释器）：IIS,Tomcat(apache,JSP,开源),Websphere(IBM,解析JSP，不开源)，Weblogic(Oracle,解析JSP，不开源),JBoss(RedHat,实际是Tomcat,只是包装了)
+
+全球web服务器统计（每半年统计一次）：https://www.netcraft.com/ 
