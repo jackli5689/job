@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 WEB服务及http协议
 
 常见请求方法：
@@ -147,3 +148,283 @@ vim httpd.conf;配置文件中有#号的都为注释,#号后面没有空格的都为指令，指令后面对应
 指令说明：
 ServerToken OS #在错误页显示错误信息
 
+=======
+1、WEB服务及http协议
+
+常见请求方法：
+GET：获取服务器资源到本地的
+POST：从本地把资源写入到服务器的
+HEAD：首部
+PUT：从远端服务器下载文件到本地的
+DELETE：从远端服务器删除文件的
+TRACE
+OPTIONS
+CONNECTION
+
+SMTP:多用途互联网邮件扩展
+	MIME协议
+HTTP:使用Base64协议（引入MIME协议）
+
+什么是动态网页？
+动态网页是由客户端请求生成的，是非HTML格式的文件，是编程语言开发的脚本，脚本接收客户端参数后在服务器运行一次，并相对应的生成一个HTML文件发送给请求的客户端
+
+web服务器处理客户端的动态网页请求时，不是web服务器生成html文件，而web服务器通过协议去调用相对应的脚本解释器去，解释器执行并生成html文件，并返回给web服务器发送给客户端。
+动态网页：包含静态内容（图片等，不需要运行解释器）和动态内容（只有动态内容才需要运行解释器生成html）
+
+阻塞：一直等待
+非阻塞：就是轮循
+无论是阻塞还是非阻塞都会接收客户端的请求，我们称阻塞或非阻塞在等待客户端请求时为监听
+
+数据包
+IP协议：源IP,目标IP
+TCP协议：源端口，目标端口
+HTTP首部：GET /2.html(什么方法，URL),Host: www.magedu.com(虚拟主机)
+HTTP报文：请求报文，响应报文
+请求报文语法：
+-------------------------------
+<method><request_URL><version>
+<headers>
+			
+<entity-body> 
+-------------------------------
+<method>：请求的方法
+<request_URL>:请求URL
+<version>：http版本，http/1.0
+<headers>：什么格式，什么类型的web对象
+<entity-body>：报文主体
+响应报文：
+-------------------------------
+<version><status><reason-phrase>
+<headers>
+			
+<entity-body> 
+-------------------------------
+<version>：http版本，http/1.0
+<status>:状态代码：1xx(纯信息)，2xx(成功类的信息，200),3xx(重定向类的信息，301，302，304),4xx(客户端错误类信息，404),5xx(服务器端错误类信息，501)
+<reason-phrase>：进一步解释status的意义的
+<headers>：什么格式，什么类型的web对象
+<entity-body>：报文主体
+
+请求报文例子：
+GET / HTTP/1.1  #GET方式，默认主页
+Host: www.magedu.com  #首部，名称及其值
+Connection: keep-alive   #首部，名称及其值
+
+
+响应报文例子：
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.2.17
+Vary: Accept-Encoding,Cookie,User-Agent
+Cache-Control: max-age=3,must-revalidata
+Cotent-Encoding: gzip
+Content-Length: 6931
+
+原生态的web服务器主要操作（不会操作动态内容的）：
+1.建立连接——接受或拒绝客户端连接请求
+2.接收请求——通过网络读取HTTP请求报文
+3.处理请求——解析请求报文并做出相应的动作
+4.访问资源——访问请求报文中相关的资源
+5.构建响应——使用正确的首部生成HTTP响应报文
+6.发送响应——向客户端发送生成的响应报文
+7.记录日志——当已经完成的http事务记录进日志文件
+
+一个页面：10image,3css,5html,总共有18个资源
+一个页面18个资源18个请求
+http每个请求都是tcp协议的，三次握手，四次分手（说明了服务器压力很大，所以缓存是很有用的）
+
+http/1.1：
+增强了缓存的功能
+长连接（减少三次握手的机会）:空闲超时，连接次数
+
+四种模型：
+1.单进程 2.多进程 3.单进程多请求 4.多进程多请求（最先进）
+httpd,MPM模型:prefork,work,event
+
+Client:IE,Firefox,Chrome,Opera,Safari
+Server:Apache-httpd,IIS,nginx,lighttpd,thttpd
+应用程序服务器（是web服务器也是解释器）：IIS,Tomcat(apache,JSP,开源),Websphere(IBM,解析JSP，不开源)，Weblogic(Oracle,解析JSP，不开源),JBoss(RedHat,实际是Tomcat,只是包装了)
+
+全球web服务器统计（每半年统计一次）：https://www.netcraft.com/ 
+
+
+
+二、------------httpd
+NCSA,httpd——解散研发人员——研发人员不想httpd默落——通过互联网进行httpd的补丁和更新并发布新的版本——就被称为A Pactchy Server(充满补丁的服务，简称Apache)
+开源界两个著名的基金会：
+FSF:GNU,GPL
+ASF:Apache Software Foundation
+
+httpd特性：
+1.事先创建空闲进程
+2.按需维持适当的进程
+3.模块设计，核心比较小，各种功能通过模块添加（包括php），支持运行时配置，支持单独编译模块
+4.支持多种方式虚拟主机配置
+
+HTTP/1.1比HTTP/1.0增加了缓存功能和长连接功能
+
+支持https协议（mod_ssl）
+支持用户认证
+支持基于IP或主机名的ACL
+支持每个目录的访问控制（默认站点可以不用认证访问，其他特定目录需要认证访问）
+支持URL重写：/image/a.jpg转到/jack/image.abc.jpg。只是服务端重写，客户端无感知。
+
+httpd:
+/usr/sbin/httpd(MPM:prefork)#默认工作的模式
+/etc/httpd #工作目录
+/etc/httpd/conf #配置文件目录，主配置文件/etc/httpd/conf/httpd.conf
+/etc/httpd/conf.d/*.conf  #主配置文件include进来的
+/etc/httpd/modules #模块目录，是一个链接目录
+/etc/httpd/logs --> /var/log/httpd #日志目录，有访问日志和错误日志两种
+/var/www/html #静态网页目录
+/var/www/cgi-bin #动态网页目录
+
+perl #脚本语言，通过插件也可以写动态网页了。
+python #脚本语言，通过插件现在也可以写动态网页了，
+java #通过servlet插件也可以制作动态网页，而且直接嵌入到html中，不用手动编译，servlet直接帮我们编译运行了，现在比较流行
+php #天生就是为动态网页而生的
+
+假如同时有500个用户访问，每个用户访问10个动态资源，总共有多少进程？
+500个web访问进程+500*10=5000个动态进程==5500个进程
+
+一台web服务器有一个master process和多个work process进程，work进程是处理客户端web请求进程的，当有动态请求时，work进程把动态请求发送给应用程序服务器（解释器）运行[通过fastcgi协议通信，web服务器和应用程序服务器通过端口或套接字来联系的]，这时应用程序服务器work process接收到后进程处理并返还html文件给web进程，web进程在发送响应给客户端。注：应用程序服务器的master process是处理自己的子进程work process的
+
+http安装:
+yum install -y httpd
+cd /etc/httpd/conf ; grep "Section" httpd.conf
+httpd有三个主配置段：1.全部环境，2.主服务配置，3.虚拟主机
+vim httpd.conf;配置文件中有#号的都为注释,#号后面没有空格的都为指令，指令后面对应的为值
+指令不区别大小写，value区分大小写
+具体指令说明可以访问官网：httpd.apache.org查看帮助手册。也可以在系统中安装手册:yum install -y httpd-manual;重启httpd服务即可访问http://localhost/manual
+指令说明：
+ServerToken OS #在错误页显示错误信息
+ServerRoot "/etc/httpd" #httpd服务的根目录
+pidfile run/httpd.pid #pid目录
+timeout 120 #tcp超时时间
+KeepAlive off #是否打开长连接
+maxkeepaliverequests 100 #长连接数最大请求数据，无限制可设为0
+keepalivetimeout 15 #长连接时间断开时长，比较繁忙的服务器，可以设低点，比如5秒钟，使用ab命令去测试时间，或者使用loadRunner(HP公司的),loadRunner接近于真实环境来测试
+<IfModule prefork.c> #prefork模型
+StartServers       8  #prefork刚开始启动的进程数
+MinSpareServers    5 #prefork最小空闲进程数
+MaxSpareServers   20 #prefork最大空闲进程数
+ServerLimit      256  #限制客户端最大连接数据，如果更改必须重启httpd服务（清理所有进程重新连接）
+MaxClients       256 #客户端最大连接数，要想改大，先要改ServerLimit项后才能改
+MaxRequestsPerChild  4000  #每一个进程最多响应4000个请求，超过kill掉重新生成
+</IfModule>
+<IfModule worker.c> #worker模型
+StartServers         4  #worker刚开始启动的进程数
+MaxClients         300  #最大客户端连接数
+MinSpareThreads     25 #最小空闲线程，以所有线程为基数的
+MaxSpareThreads     75 #最大空闲线程
+ThreadsPerChild     25 #每一个进程生成25个子线程
+MaxRequestsPerChild  0 #每一个进程最大响应多少请求，由于worker模式是线程响应的，所以这里为0，不做响应
+</IfModule>
+Listen 80 #监听本地主机所有端口，可以监听多个端口，多加几次Listen 8080参数即可
+LoadModule foo_module modules/mod_foo.so #装载模块：模块名称：模块路径（相对路径，以ServerRoot为根的）
+Include conf.d/*.conf  #包含目录下的*.conf文件
+User apache  #work进程需要以普通用户运行，在这设置
+Group apache
+
+ServerAdmin root@localhost #站点管理员邮件地址，用来给管理员发邮件时用的地址
+#ServerName www.example.com:80 #虚拟主机名，如果没有设置则会用本地主机IP反解的域名来使用主机名，一般localhost
+DocumentRoot "/var/www/html" #网站根目录，
+<Directory "/var/www/html"> #对网站根目录进行权限设置
+ Options Indexes FollowSymLinks #Options定义对应目录下文件的访问属性的。Indexes把文件列出来，只有在当文件下载时用的，其他时候不要开启。Indexex(允许索引目录，不安全的),None（不任何支持选项），Includes(允许执行服务端包含（SSI），不安全的),FollowFSynLinks(允许使用符号链接,影响性能)，execCGI(允许运行CGI脚本)，All(支持所有选项)
+ AllowOverride None #允许覆盖,是指定Order和Allow选项的
+Order allow,deny #order意为顺序，设置先允许后拒绝的。只要没有被明确允许的都会被拒绝访问
+Allow from all #允许从所有地方访问
+地址的表示方式：1.ip 2.network/netmask 3.hostname 4.domainname 5.partial IP:172.16
+
+ AllowOverride AuthConfig  #设置认证后的用户才能访问，第一次用htpasswd -c -m /etc/httpd/conf/htpasswd hadoop命令来创建hadoop用户的，-c意为第一次新建，如果第二次建用户，则不需要加-c,例：htpasswd -m /etc/httpd/conf/htpasswd tom 。-m意为md5加密,-D为删除用户
+ AuthType Basic #认证类型为basic，有其他认证类型digest
+ AuthName "Restrocted Sote...." #显示认证时的提示信息
+ AuthUserFile "/etc/httpd/conf/htpasswd" #用户认证的帐号和密码文件路径
+#AuthGroupFile "/etc/httpd/conf/htgruop" #用户组的文件路径，组文件格式是：myusers: hadoop tom
+ Require Valid-user #设置请求的户为所有有效的用户，也可以指定某个用户或某个组
+ Require user hadoop #只允许hadoop用户访问
+#Requier group myusers #只允许myusers这个组能访问
+ </Directory>
+<IfModule mod_userdir.c>
+#UserDir disabled #是否允许用户在自己的家目录下创建网页（个人页面），例：http://192.168.1.233/~hadoop/
+ UserDir public_html #只允许用户家目录下特定的public_html目录能创建网页，这个用户为linux用户，例如/home/hadoop/public_html/index.html && chmod o+x /home/www && http://192.168.1.233/~hadoop即可访问个人站点。须先重启服务
+#<Directory /home/*/public_html> #定义用户家目录下特定目录的权限
+#    AllowOverride FileInfo AuthConfig Limit
+#    Options MultiViews Indexes SymLinksIfOwnerMatch IncludesNoExec
+#    <Limit GET POST OPTIONS> #只限定GET POST OPTIONS三种方法
+#        Order allow,deny 
+#        Allow from all  #允许所有
+#    </Limit>
+#    <LimitExcept GET POST OPTIONS> #只限定除开GET POST OPTIONS外的方法
+#        Order deny,allow
+#        Deny from all  #拒绝所有
+#    </LimitExcept>
+#</Directory>
+
+</IfModule>
+
+
+
+[root@a019736cb441 /]#grep 'Section' /etc/httpd/conf/httpd.conf
+### Section 1: Global Environment  #全局环境
+### Section 2: 'Main' server configuration  #主Server段，只有一个web服务器不提供虚拟主机
+### Section 3: Virtual Hosts #虚拟主机，禁用中心主机，有多台主机
+httpd -t #测试配置文件语法
+elinks http://192.168.1.233 #-dump参数代表不使用交换式，登录后就退出。-source显示html格式源码并退出
+
+
+
+
+
+
+
+-----多处理模块(MPM)：
+mpm_winnt（windows专用的）
+worker（一个请求用一个线程响应，服务器启动多个进程，每个进程生成多个线程）
+prefork(一个请求用一个进程响应)（httpd2.2默认）
+event（一个进程处理多个请求，httpd2.4默认）,最强大的机制模型，nginx就是这种机制模型
+切换httpd MPM程序：
+注：如果在安装httpd时MPM模块编译了就有，没有就没有了
+[root@salt-server /git/job]# httpd -l #查看编译的模块
+Compiled in modules:
+  core.c
+  mod_so.c
+  http_core.c
+[root@a019736cb441 conf]#httpd -M  #httpd所有支持额外装载的模块
+httpd: Could not reliably determine the server's fully qualified domain name, using 172.17.0.3 for ServerName
+Loaded Modules:
+ core_module (static)
+ mpm_prefork_module (static)
+ http_module (static)
+ so_module (static)
+ auth_basic_module (shared)
+
+rpm -ql httpd | grep bin #可查看httpd的执行命令
+[root@salt-server /git/job]# vim /etc/sysconfig/httpd 
+"HTTPD"=/usr/sbin/httpd.worker #这里可以选择MPM模型，然后启动脚本会从这里读取从而启动不同进程，默认是prefork进程
+
+
+
+
+
+
+docker:redhat6.5下下载Centos源后，用sed -i 's/$releasever/7/g' /etc/yum.repos.d/Centos-7.repo  把releasever改成6的
+[root@710c7a2a06aa application]# /usr/sbin/sshd 
+Could not load host key: /etc/ssh/ssh_host_ed25519_key
+[root@710c7a2a06aa application]# ssh-keygen -t rsa -f  /etc/ssh/ssh_host_ed25519_key  #可解决上面报错的问题
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> 07e9adb48ce7bdb9190366c93335e37c882ec1d9
