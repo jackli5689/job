@@ -1,3 +1,5 @@
+WEB服务及http协议
+
 常见请求方法：
 GET：获取服务器资源到本地的
 POST：从本地把资源写入到服务器的
@@ -92,3 +94,56 @@ Server:Apache-httpd,IIS,nginx,lighttpd,thttpd
 应用程序服务器（是web服务器也是解释器）：IIS,Tomcat(apache,JSP,开源),Websphere(IBM,解析JSP，不开源)，Weblogic(Oracle,解析JSP，不开源),JBoss(RedHat,实际是Tomcat,只是包装了)
 
 全球web服务器统计（每半年统计一次）：https://www.netcraft.com/ 
+
+
+
+------------httpd
+NCSA,httpd——解散研发人员——研发人员不想httpd默落——通过互联网进行httpd的补丁和更新并发布新的版本——就被称为A Pactchy Server(充满补丁的服务，简称Apache)
+开源界两个著名的基金会：
+FSF:GNU,GPL
+ASF:Apache Software Foundation
+
+httpd特性：
+1.事先创建空闲进程
+2.按需维持适当的进程
+3.模块设计，核心比较小，各种功能通过模块添加（包括php），支持运行时配置，支持单独编译模块
+4.支持多种方式虚拟主机配置
+
+HTTP/1.1比HTTP/1.0增加了缓存功能和长连接功能
+
+支持https协议（mod_ssl）
+支持用户认证
+支持基于IP或主机名的ACL
+支持每个目录的访问控制（默认站点可以不用认证访问，其他特定目录需要认证访问）
+支持URL重写：/image/a.jpg转到/jack/image.abc.jpg。只是服务端重写，客户端无感知。
+
+httpd:
+/usr/sbin/httpd(MPM:prefork)#默认工作的模式
+/etc/httpd #工作目录
+/etc/httpd/conf #配置文件目录，主配置文件/etc/httpd/conf/httpd.conf
+/etc/httpd/conf.d/*.conf  #主配置文件include进来的
+/etc/httpd/modules #模块目录，是一个链接目录
+/etc/httpd/logs --> /var/log/httpd #日志目录，有访问日志和错误日志两种
+/var/www/html #静态网页目录
+/var/www/cgi-bin #动态网页目录
+
+perl #脚本语言，通过插件也可以写动态网页了。
+python #脚本语言，通过插件现在也可以写动态网页了，
+java #通过servlet插件也可以制作动态网页，而且直接嵌入到html中，不用手动编译，servlet直接帮我们编译运行了，现在比较流行
+php #天生就是为动态网页而生的
+
+假如同时有500个用户访问，每个用户访问10个动态资源，总共有多少进程？
+500个web访问进程+500*10=5000个动态进程==5500个进程
+
+一台web服务器有一个master process和多个work process进程，work进程是处理客户端web请求进程的，当有动态请求时，work进程把动态请求发送给应用程序服务器（解释器）运行[通过fastcgi协议通信，web服务器和应用程序服务器通过端口或套接字来联系的]，这时应用程序服务器work process接收到后进程处理并返还html文件给web进程，web进程在发送响应给客户端。注：应用程序服务器的master process是处理自己的子进程work process的
+
+http安装:
+yum install -y httpd
+cd /etc/httpd/conf ; grep "Section" httpd.conf
+httpd有三个主配置段：1.全部环境，2.主服务配置，3.虚拟主机
+vim httpd.conf;配置文件中有#号的都为注释,#号后面没有空格的都为指令，指令后面对应的为值
+指令不区别大小写，value区分大小写
+具体指令说明可以访问官网：httpd.apache.org查看帮助手册。也可以在系统中安装手册:yum install -y httpd-manual;重启httpd服务即可访问http://localhost/manual
+指令说明：
+ServerToken OS #在错误页显示错误信息
+
