@@ -1,4 +1,4 @@
-WEB服务及http协议
+1、WEB服务及http协议
 
 常见请求方法：
 GET：获取服务器资源到本地的
@@ -97,7 +97,7 @@ Server:Apache-httpd,IIS,nginx,lighttpd,thttpd
 
 
 
-------------httpd
+二、------------httpd
 NCSA,httpd——解散研发人员——研发人员不想httpd默落——通过互联网进行httpd的补丁和更新并发布新的版本——就被称为A Pactchy Server(充满补丁的服务，简称Apache)
 开源界两个著名的基金会：
 FSF:GNU,GPL
@@ -146,4 +146,80 @@ vim httpd.conf;配置文件中有#号的都为注释,#号后面没有空格的都为指令，指令后面对应
 具体指令说明可以访问官网：httpd.apache.org查看帮助手册。也可以在系统中安装手册:yum install -y httpd-manual;重启httpd服务即可访问http://localhost/manual
 指令说明：
 ServerToken OS #在错误页显示错误信息
+ServerRoot "/etc/httpd" #httpd服务的根目录
+pidfile run/httpd.pid #pid目录
+timeout 120 #tcp超时时间
+KeepAlive off #是否打开长连接
+maxkeepaliverequests 100 #长连接数最大请求数据，无限制可设为0
+keepalivetimeout 15 #长连接时间断开时长，比较繁忙的服务器，可以设低点，比如5秒钟，使用ab命令去测试时间，或者使用loadRunner(HP公司的),loadRunner接近于真实环境来测试
+<IfModule prefork.c> #prefork模型
+StartServers       8  #prefork刚开始启动的进程数
+MinSpareServers    5 #prefork最小空闲进程数
+MaxSpareServers   20 #prefork最大空闲进程数
+ServerLimit      256  #限制客户端最大连接数据，如果更改必须重启httpd服务（清理所有进程重新连接）
+MaxClients       256 #客户端最大连接数，要想改大，先要改ServerLimit项后才能改
+MaxRequestsPerChild  4000  #每一个进程最多响应4000个请求，超过kill掉重新生成
+</IfModule>
+<IfModule worker.c> #worker模型
+StartServers         4  #worker刚开始启动的进程数
+MaxClients         300  #最大客户端连接数
+MinSpareThreads     25 #最小空闲线程，以所有线程为基数的
+MaxSpareThreads     75 #最大空闲线程
+ThreadsPerChild     25 #每一个进程生成25个子线程
+MaxRequestsPerChild  0 #每一个进程最大响应多少请求，由于worker模式是线程响应的，所以这里为0，不做响应
+</IfModule>
+Listen 80 #监听本地主机所有端口，可以监听多个端口，多加几次Listen 8080参数即可
+LoadModule foo_module modules/mod_foo.so #装载模块：模块名称：模块路径（相对路径，以ServerRoot为根的）
+Include conf.d/*.conf  #包含目录下的*.conf文件
+User apache  #work进程需要以普通用户运行，在这设置
+Group apache
+
+
+
+
+
+
+
+
+
+-----多处理模块(MPM)：
+mpm_winnt（windows专用的）
+worker（一个请求用一个线程响应，服务器启动多个进程，每个进程生成多个线程）
+prefork(一个请求用一个进程响应)（httpd2.2默认）
+event（一个进程处理多个请求，httpd2.4默认）,最强大的机制模型，nginx就是这种机制模型
+切换httpd MPM程序：
+注：如果在安装httpd时MPM模块编译了就有，没有就没有了
+[root@salt-server /git/job]# httpd -l #查看编译的模块
+Compiled in modules:
+  core.c
+  mod_so.c
+  http_core.c
+rpm -ql httpd | grep bin #可查看httpd的执行命令
+[root@salt-server /git/job]# vim /etc/sysconfig/httpd 
+"HTTPD"=/usr/sbin/httpd.worker #这里可以选择MPM模型，然后启动脚本会从这里读取从而启动不同进程，默认是prefork进程
+
+
+
+
+
+
+docker:redhat6.5下下载Centos源后，用sed -i 's/$releasever/7/g' /etc/yum.repos.d/Centos-7.repo  把releasever改成6的
+[root@710c7a2a06aa application]# /usr/sbin/sshd 
+Could not load host key: /etc/ssh/ssh_host_ed25519_key
+[root@710c7a2a06aa application]# ssh-keygen -t rsa -f  /etc/ssh/ssh_host_ed25519_key  #可解决上面报错的问题
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
