@@ -288,14 +288,14 @@ php #天生就是为动态网页而生的
 
 一台web服务器有一个master process和多个work process进程，work进程是处理客户端web请求进程的，当有动态请求时，work进程把动态请求发送给应用程序服务器（解释器）运行[通过fastcgi协议通信，web服务器和应用程序服务器通过端口或套接字来联系的]，这时应用程序服务器work process接收到后进程处理并返还html文件给web进程，web进程在发送响应给客户端。注：应用程序服务器的master process是处理自己的子进程work process的
 
-http安装:
+http安装及属性配置:
 yum install -y httpd
 cd /etc/httpd/conf ; grep "Section" httpd.conf
 httpd有三个主配置段：1.全部环境，2.主服务配置，3.虚拟主机
 vim httpd.conf;配置文件中有#号的都为注释,#号后面没有空格的都为指令，指令后面对应的为值
 指令不区别大小写，value区分大小写
 具体指令说明可以访问官网：httpd.apache.org查看帮助手册。也可以在系统中安装手册:yum install -y httpd-manual;重启httpd服务即可访问http://localhost/manual
-指令说明：
+属性配置：
 ServerToken OS #在错误页显示错误信息
 ServerRoot "/etc/httpd" #httpd服务的根目录
 pidfile run/httpd.pid #pid目录
@@ -324,7 +324,6 @@ LoadModule foo_module modules/mod_foo.so #装载模块：模块名称：模块路径（相对路径
 Include conf.d/*.conf  #包含目录下的*.conf文件
 User apache  #work进程需要以普通用户运行，在这设置
 Group apache
-
 ServerAdmin root@localhost #站点管理员邮件地址，用来给管理员发邮件时用的地址
 #ServerName www.example.com:80 #虚拟主机名，如果没有设置则会用本地主机IP反解的域名来使用主机名，一般localhost
 DocumentRoot "/var/www/html" #网站根目录，
@@ -334,15 +333,14 @@ DocumentRoot "/var/www/html" #网站根目录，
 Order allow,deny #order意为顺序，设置先允许后拒绝的。只要没有被明确允许的都会被拒绝访问
 Allow from all #允许从所有地方访问
 地址的表示方式：1.ip 2.network/netmask 3.hostname 4.domainname 5.partial IP:172.16
-
  AllowOverride AuthConfig  #设置认证后的用户才能访问，第一次用htpasswd -c -m /etc/httpd/conf/htpasswd hadoop命令来创建hadoop用户的，-c意为第一次新建，如果第二次建用户，则不需要加-c,例：htpasswd -m /etc/httpd/conf/htpasswd tom 。-m意为md5加密,-D为删除用户
  AuthType Basic #认证类型为basic，有其他认证类型digest
  AuthName "Restrocted Sote...." #显示认证时的提示信息
  AuthUserFile "/etc/httpd/conf/htpasswd" #用户认证的帐号和密码文件路径
-#AuthGroupFile "/etc/httpd/conf/htgruop" #用户组的文件路径，组文件格式是：myusers: hadoop tom
+AuthGroupFile "/etc/httpd/conf/htgruop" #用户组的文件路径，组文件格式是：myusers: hadoop tom
  Require Valid-user #设置请求的户为所有有效的用户，也可以指定某个用户或某个组
  Require user hadoop #只允许hadoop用户访问
-#Requier group myusers #只允许myusers这个组能访问
+ Requier group myusers #只允许myusers这个组能访问
  </Directory>
 <IfModule mod_userdir.c>
 #UserDir disabled #是否允许用户在自己的家目录下创建网页（个人页面），例：http://192.168.1.233/~hadoop/
@@ -359,9 +357,29 @@ Allow from all #允许从所有地方访问
 #        Deny from all  #拒绝所有
 #    </LimitExcept>
 #</Directory>
-
 </IfModule>
-
+DirectoryIndex index.html index.html.var #目录索引，就是主页文件，自左向右匹配，如果有权限访问而站点下没有这些主页，就会把目录给这个权限用户
+AccessFileName .htaccess  #.htaccess是在站点下每个目录下的访问控制文件，从而达到每个目录权限控制，这个东西让apache的运行效率极低。生产环境是是禁用的
+<Files ~ "^\.ht"> #模式匹配，以.ht开头的
+  Order allow,deny  
+  Deny from all #拒绝所有 
+  Satisfy All
+</Files>
+TypesConfig /etc/mime.types #让http协议支持多媒体非二进制类型的文件，里面记录了支持的类型
+DefaultType text/plain #默认类型是文本下的纯文本信息
+<IfModule mod_mime_magic.c> #如果mod_mime_magic.c模块存在
+ # MIMEMagicFile /usr/share/magic.mime
+  MIMEMagicFile conf/magic  #就使用conf/magic信息
+</IfModule>
+HostnameLookups Off #是否让日志记录主机名而不是记录ip，设成主机名容易浪费主机资源
+ErrorLog logs/error_log #定义错误日志路径
+LogLevel warn #日志级别为warn
+LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined #定义日志格式，并给日志模式起个名字，combined为混合模式[%h远程主机、%l远端主机登录名称（一般为-）、%u 登录网站用户（没登录为-）、%t收到请求的时候、（\反斜号转义）%r第一行请求（为方法，URL，版本号）、%>s最后一个请求的状态码、%b响应报文的大小、%{Referer}i表示你从哪个页面来的、%{User-Agent}i记录用户浏览器]
+ LogFormat "%h %l %u %t \"%r\" %>s %b" common #通用模式
+LogFormat "%{Referer}i -> %U" referer #记录访问地址来源
+LogFormat "%{User-agent}i" agent #只记录浏览器类型
+CustomLog logs/access_log combined #定义日志类型为combined，通过访问日志来判断页面访问量（PV（page view）,pv按每天统计，按照每个页面来统计不能按照一个资源来访问），判断客户访问量（UV（user view），uv按独立IP访问量）
+Alias /icons/ "/www/icons/" #别名，在站点下创建一个别名/icons，访问时实际内容指向/www/icons/下
 
 
 [root@a019736cb441 /]#grep 'Section' /etc/httpd/conf/httpd.conf
@@ -370,13 +388,6 @@ Allow from all #允许从所有地方访问
 ### Section 3: Virtual Hosts #虚拟主机，禁用中心主机，有多台主机
 httpd -t #测试配置文件语法
 elinks http://192.168.1.233 #-dump参数代表不使用交换式，登录后就退出。-source显示html格式源码并退出
-
-
-
-
-
-
-
 -----多处理模块(MPM)：
 mpm_winnt（windows专用的）
 worker（一个请求用一个线程响应，服务器启动多个进程，每个进程生成多个线程）
@@ -402,29 +413,92 @@ rpm -ql httpd | grep bin #可查看httpd的执行命令
 [root@salt-server /git/job]# vim /etc/sysconfig/httpd 
 "HTTPD"=/usr/sbin/httpd.worker #这里可以选择MPM模型，然后启动脚本会从这里读取从而启动不同进程，默认是prefork进程
 
+四、httpd虚拟主机：
+apache服务主机：
+中心主机：不使用虚拟主机的主机
+虚拟主机：服务于多个不同的站点
+两个主机不能同时使用。
+虚拟主机：
+   基于IP: ip1:80,ip2:80
+   基于端口：ip:80,ip:8080
+   基于域名：ip:80，ip和端口相同，主机名不同（常用）。
+apache2.2用NameVirtualHost启用
+apache2.4想用什么类型虚拟主机就用哪种方式定义即可
+虚拟主机之间不同配置处：
+-------------
+DocumentRoot /www/a.org/
+ServerName
+ServerAlias  #虚拟主机别名，可以多个
+<Directory "/www/a.org/"> #基于目录的访问权限
+	Options
+	AllowOverride
+</Directory>
+Alias #别名不同
+ErrorLog   #错误日志路径及格式
+CustomLog  #访问日志路径及格式
+<Location "/images"> #定义URL各个目录使用的权限，比如只允许使用GET方法等等
 
+</Location>
+ScriptAlias #脚本别名，允许执行CGI的目录（CGI通用网关接口协议）
+-------------
+虚拟主机的定义：（使用虚拟主机的时候必须先取消中心主机，注释DocumentRoot即可）
+<VirtualHost www.jack.com>
 
+</VirtualHost>
+vim /etc/httpd/conf.d/virtual.conf
+基于IP主机定义：
+注释httpd.conf文件中DocumentRoot中心主机
+<VirtualHost 172.17.0.3:80 >
+        ServerName www.jack.com
+        DocumentRoot "/www/magedu.com"
+</VirtualHost>
+<VirtualHost 172.17.0.2:80 >
+        ServerName www.jack2.com
+        DocumentRoot "/www/magedu2.com"
+</VirtualHost>
+用httpd -t 检查语法 
 
+基于端口主机定义：
+<VirtualHost 172.17.0.2:80 >
+        ServerName www.jack2.com
+        DocumentRoot "/www/magedu2.com"
+</VirtualHost>
+<VirtualHost 172.17.0.2:8080 >
+        ServerName port.jack.com
+        DocumentRoot "/www/magedu2.com"
+</VirtualHost>
+vim /etc/httpd/conf/httpd.conf添加listen8080端口。多监听端口
 
+基于域名主机定义：
+[root@a019736cb441 conf.d]#cat virtual.conf 
+NameVirtualHost 172.17.0.2:80
+<VirtualHost 172.17.0.2:80>
+        ServerName sec.jack.com
+        DocumentRoot "/www/magedu2.com/"
+        CustomLog /var/www/httpd/sec.jack.com/access_log combined  #设置虚拟主机各自目录
+       <Directory "/www/magedu2.com"> #设置这个主机目录不允许172.168.0.3访问
+	Options none
+	AllowOverride none
+	Order deny,allow
+	Deny from 172.168.0.3
+       </Directory>
+</VirtualHost>
+<VirtualHost 172.17.0.2:80>
+        ServerName domain.jack.com
+        DocumentRoot "/www/magedu3.com/"
+        CustomLog /var/www/httpd/domain.jack.com/access_log combined
+        <Directory "/www/magedu3.com">
+                Options none
+                AllowOverride authconfig
+                AuthType Basic
+                AuthName "Restrocted Sote..."
+                AuthUserFile "/etc/httpd/config/htpasswd"
+                Require Valid-user #设置有登录认证
+        </Directory>
+</VirtualHost>
 
-docker:redhat6.5下下载Centos源后，用sed -i 's/$releasever/7/g' /etc/yum.repos.d/Centos-7.repo  把releasever改成6的
-[root@710c7a2a06aa application]# /usr/sbin/sshd 
-Could not load host key: /etc/ssh/ssh_host_ed25519_key
-[root@710c7a2a06aa application]# ssh-keygen -t rsa -f  /etc/ssh/ssh_host_ed25519_key  #可解决上面报错的问题
+-------------
+客户端动态：从服务器把脚本复制到客户端本地运行，不安全（例如黑客写个格式化硬盘脚本），适用性不强
+服务端动态：基于CGI协议技术调用解释器运行脚本返回给apache（解释器：bash,c,php,python,java等）
+MVC:一种软件设计典范，用一种业务逻辑、数据、界面显示分离的方法组织代码
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
->>>>>>> 07e9adb48ce7bdb9190366c93335e37c882ec1d9
