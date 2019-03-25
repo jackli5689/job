@@ -798,12 +798,12 @@ phpmyadmin：修改库文件夹下的config.default.php文件，指定mysql服�
 动太内容静态化：用户第一次的php请求由httpd发送给php解释器去执行，php的zend引擎去mysql拿数据并编译php生成opcode,j最后zend引擎执行生成结果返回给httpd，由httpd保存在本地存储池并发送一份给客户端，当第二个用户访问相当的内容时，httpd直接去存储池拿返回给用户，这样的话访问速度快得多得多。
 #编译安装LAMP
 Linux,Apache,Mysql,PHP(Python,perl)
-httpd:2.4.2、php5.4.13、mysql5.5（通用二进制安装）
+httpd:2.4.2、php5.4.13、mysql5.5（mysql通用二进制安装）
 编译安装顺序：httpd-->Mysql-->php-->XCache
 apr:Apache Portable Runtime(httpd底层是apr，可移植环境，安装后可使windows的httpd在linux上运行，反之亦然)
 #编译安装httpd
 先安装apr-util（apr工具）和apr，再安装httpd
-1.确保 Development tools和Development Libraries都已
+1.确保 Development tools和Development Libraries都已安装
 yum groupinstall -y "Development tools"
 yum groupinstall -y "Development Libraries"
 2.下载源码包：
@@ -821,9 +821,87 @@ make && make install #安装。
 4.源码安装apr-util:
  ./configure --prefix=/usr/local/apr-util --with-apr=/usr/local/apr #指定apr路径及安装路径
 make && make install #安装
-5.
+注意：make的时候报错：xml/apr_xml.c:35:19: fatal error: expat.h: No such file or directory
+此时需要安装expat-devel,因为缺少expat.h文件。:yum install expat-devel
+5.源码安装httpd:
+--enable-ssl   #启用ssl加密功能，使支持https
+--enable-so   #是否支持动态共享模块（默认的），如果不启用则php无法以模块化方式跟httpd结合工作了
+--sysconfdir=DIR  #选择配置目录
+--enable-modules=MODULE-LIST  #是否启用什么模块
+--enable-mods-shared=MODULE-LIST  #是否以共享模式启用模块
+--enable-mods-static=MODULE-LIST  #是否以静态模式启用模块
+--enable-authn  #启用访问认证功能，默认是开启的，--disable-authn-file 为关闭此功能
+--enable-authn-dbm    #启用认证功能dbm
+--enable-authn-anon   #启用认证功能anon  
+--enable-authn-dbd    #启用认证功能dbd  
+--enable-authn-socache   #启用认证功能socache
+--disable-authn-core   #启用认证功能core
+--enable-deflate   #启用使httpd压缩传输
+--enable-expires #过期首部控制
+--enable-proxy-fcgi  #开启httpd的fastCGI协议，将支持与php使用fastCGI
+模块化方式使用MPM，可以单独把prefork,worker,event编译成三个不同的模块，在需要的时候直接调用即可，但是，在php和prefork相结合的时候php不受影响，可以正常使用，当php与worker或者php与event相结合使用时，php必须编译成zts格式
+注意：httpd2.2版本默认是prefork格式，2.4以后默认是event模式了
+--enable-mpms-shared=MPM-LIST #启用prefork或worker或event或all（所有模式）
+--with-mpm=MPM  #明确指定哪个模式为默认的，如果不指则event为默认模式
+--enable-rewrite  #是否支持URL重写
+--enable-cgi  #开启CGI给prefork使用的
+--enable-cgid   #开启CGI给线程使用的，worker或event MPM使用
+#编译安装httpd:
+yum install -y pcre-devel  #解决依赖关系
+[root@Linux-node5-master-mysql httpd-2.4.38]# ./configure --prefix=/usr/local/httpd-2.4.38 --sysconfdir=/etc/httpd --enable-so --enable-rewrite --enable-ssl --enable-cgi --enable-cgid --enable-modules=most --enable-mods-shared=most --enable-mpms-shared=all --with-mpm=event --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util
+make && make install #安装
+注：默认web服务器是受SElinux控制的。检查SElinux是否关掉。
+cd /usr/local/httpd-2.4.38/ &&  ln -s httpd-2.4.38/ apache
+bin/apachectl start #启动httpd
+tree -d
+.
+├── bin  #二进制程序都在这
+├── build  #编译时候的目录
+├── cgi-bin  #执行cgi程序的存放位置
+├── error  #错误信息
+│?? └── include
+├── htdocs  #手动编译安装时，网页文件位置在这
+├── icons  #图标
+│?? └── small
+├── include  #头文件
+├── logs  #日志文件
+├── man  #帮助文件
+│?? ├── man1
+│?? └── man8
+├── manual  #官方手册
+│?? ├── developer
+│?? ├── faq
+│?? ├── howto
+│?? ├── images
+│?? ├── misc
+│?? ├── mod
+│?? ├── platform
+│?? ├── programs
+│?? ├── rewrite
+│?? ├── ssl
+│?? ├── style
+│?? │?? ├── css
+│?? │?? ├── lang
+│?? │?? ├── latex
+│?? │?? ├── scripts
+│?? │?? └── xsl
+│?? │??     └── util
+│?? └── vhosts
+└── modules  #模块目录
+[root@Linux-node5-master-mysql apache]# vim /etc/httpd/httpd.conf #如果编译时不指定配置目录，现在在/usr/local/httpd-2.4.38/目录下有conf目录的，指定了则移动到指定位置了
+[root@Linux-node5-master-mysql apache]# ls logs/
+access_log  error_log  httpd.pid  #由于httpd.pid文件在logs目录下不标准，下面更改下
+[root@Linux-node5-master-mysql apache]# bin/apachectl stop #先停止apache服务再改配置
+[root@Linux-node5-master-mysql apache]# vim /etc/httpd/httpd.conf
+PidFile "/var/run/httpd.pid" #加一行
+[root@Linux-node5-master-mysql apache]# bin/apachectl start
+[root@Linux-node5-master-mysql apache]# ls logs/ 
+access_log  error_log   #此时已经更改成功
+[root@Linux-node5-master-mysql apache]# ls /var/run/httpd.pid 
+/var/run/httpd.pid  #更改的位置
 
- 
+
+
 
 
 
