@@ -1,4 +1,4 @@
-﻿#LAMP
+#LAMP
 <pre>
 ###WEB服务及http协议
 
@@ -899,10 +899,102 @@ PidFile "/var/run/httpd.pid" #加一行
 access_log  error_log   #此时已经更改成功
 [root@Linux-node5-master-mysql apache]# ls /var/run/httpd.pid 
 /var/run/httpd.pid  #更改的位置
+httpd服务脚本：
+[root@Linux-node5-master-mysql init.d]# cat /etc/init.d/httpd
+-----------------
+#!/bin/bash
 
+. /etc/rc.d/init.d/functions
 
+if [ -f /etc/sysconfig/httpd ];then
+        . /etc/sysconfig/httpd
+fi
 
+HTTPD_LANG=${HTTPD_LANG-"C"}
 
+INITLOG_ARGS=""
+
+apachectl=/usr/local/apache/bin/apachectl
+httpd=${HTTPD-/usr/local/apache/bin/httpd}
+prog=httpd
+pidfile=${PIDFILE-/var/run/httpd.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/httpd}
+RETVAL=0
+
+start(){
+        echo -n $"Starting $prog:"
+        LANG=$HTTPD_LANG daemon --pidfile=${pidfile} $httpd $OPTIONS
+        RETVAL=$?
+        echo
+        { $RETVAL = 0 } && touch ${lockfile}
+        return $RETVAL
+}
+
+stop(){
+        echo -n $"Stopping $prog:"
+        killproc -p ${pidfile} -d 10 $httpd
+        RETVAL=$?
+        echo
+        { $RETVAL = 0 } && rm -f ${lockfile} ${pidfile}
+}
+
+reload(){
+        echo -n $"Reloading $prog:"
+        if ! LANG=$HTTPD_LANG $httpd $OPTIONS -t >&/dev/null; then
+                RETVAL=$?
+                echo $"not reloading due to configuration syntax error"
+                failure $"not reloading $httpd due to configuration syntax error"
+        else
+                killproc -p ${pidfile} $httpd -HUP
+                RETVAL=$?
+        fi
+        echo
+}
+
+# See how we were called.
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        status)
+                status -p ${pidfile} $httpd
+                RETVAL=$?
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        condrestart)
+                if [ -f ${pidfile} ];then
+                        stop
+                        start
+                fi
+                ;;
+        reload)
+                reload
+                ;;
+        graceful|help|configtest|fullstatus)
+                $apachectl $@
+                RETVAL=$?
+                ;;
+        *)
+                echo $"Usage: $prog {start|stop|restart|condrestart|reload|status|fullstatus|granceful|help|configtest}"
+                exit 1
+                ;;
+esac
+
+exit $RETVAL
+-----------------
+注:添加后可使用service httpd start|stop|status|restart来启动服务，也可使chkconfig来管理服务
+[root@Linux-node5-master-mysql bin]# vim /etc/profile.d/httpd.sh
+export PATH=$PATH:/usr/local/apache/bin #加一行变量
+[root@Linux-node5-master-mysql bin]# . /etc/profile.d/httpd.sh #使变量生效
+[root@Linux-node5-master-mysql bin]# vim /etc/httpd/httpd.conf #修改为prefork模式，重启服务生效
+#LoadModule mpm_event_module modules/mod_mpm_event.so
+ LoadModule mpm_event_module modules/mod_mpm_event.so #修改当前行
 
 
 
