@@ -1,4 +1,4 @@
-﻿#LAMP
+#LAMP
 <pre>
 ###WEB服务及http协议
 
@@ -794,6 +794,7 @@ phpmyadmin：修改库文件夹下的config.default.php文件，指定mysql服�
 
 
 #LAMP平台源码安装
+####源码包各版本
 <pre>
 动太内容静态化：用户第一次的php请求由httpd发送给php解释器去执行，php的zend引擎去mysql拿数据并编译php生成opcode,j最后zend引擎执行生成结果返回给httpd，由httpd保存在本地存储池并发送一份给客户端，当第二个用户访问相当的内容时，httpd直接去存储池拿返回给用户，这样的话访问速度快得多得多。
 #编译安装LAMP
@@ -1293,6 +1294,160 @@ libxml2-static.x86_64                   2.9.1-6.el7_2.3          base
 把php编译成fastCGI模式：
 [root@Linux-node5-master-mysql php-5.4.13]# ./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 --enable-maintainer-zts
 注：把--with-apxs2=/usr/local/apache/bin/apxs这项去掉，换成--enable-fpm，只能开启一个模式
+[root@Linux-node5-master-mysql php]# ls bin/ #php-config和phpize是php命令行工具
+pear  peardev  pecl  phar  phar.phar  php  php-cgi  php-config  phpize
+[root@Linux-node5-master-mysql php]# ls etc/ #为php其他子项目提供的配置文件存放路径
+pear.conf
+[root@Linux-node5-master-mysql php]# ls include/ #php头文件
+php
+[root@Linux-node5-master-mysql php]# ls lib/ #php库文件
+php
+[root@Linux-node5-master-mysql php]# ls php/ #php手册
+man
+[root@Linux-node5-master-mysql php]# ll /usr/local/apache/modules/libphp5.so  #libphp5.so为安装的php模块,权限为755，默认没有被httpd加载
+-rwxr-xr-x 1 root root 31580192 Mar 26 17:52 /usr/local/apache/modules/libphp5.so
+[root@Linux-node5-master-mysql php-5.4.13]# cp php.ini-production /etc/php.ini #从源码包下复制生产环境的配置文件到/etc目录下，名称叫php.ini。因为php编译的时候参数指定配置文件目录为/etc
+#如何让httpd跟php相结合工作？
+首先要让php能够处理以php页面结尾的文件，所以这里先编辑httpd配置文件，添加php类型。
+[root@Linux-node5-master-mysql htdocs]# vim /etc/httpd/httpd.conf
+AddType application/x-httpd-php .php  #添加php文件
+AddType application/x-httpd-php-source .phps #添加php源码文件
+<IfModule dir_module>
+    DirectoryIndex  index.php index.html  #添加index.php索引
+</IfModule>
+
+Include /etc/httpd/extra/httpd-ssl.conf #这是启用ssl的，还要装载ssl模块
+
+[root@Linux-node5-master-mysql htdocs]# cat index.php #添加php函数到索引测试php
+<html><body><h1>It works!</h1></body></html>
+<?php
+phpinfo();
+?>
+
+[root@Linux-node5-master-mysql htdocs]# cat index.php #编辑index.php,添加测试mysql数据库配置到网页测试
+<html><body><h1>It works!</h1></body></html>
+<?php
+        $conn=mysql_connect('localhost','root','');
+        if ($conn)
+                echo "Success...";
+        else
+                echo "Faild.....";
+?>
+
+#配置XCache:
+XCache资源网站：https://xcache.lighttpd.net/
+下载XCache:wget https://xcache.lighttpd.net/pub/Releases/3.1.2/xcache-3.1.2.tar.gz
+[root@Linux-node5-master-mysql download]# tar  xf xcache-3.1.2.tar.gz
+[root@Linux-node5-master-mysql download]# cd xcache-3.1.2/
+php支持扩展功能：xcache,  #所有的扩展在编译之前都要执行phpize命令的
+让php命令加载xcache:
+[root@Linux-node5-master-mysql xcache-3.1.2]# ls /usr/local/php/php/man/man1/
+php.1  php-config.1  phpize.1 
+[root@Linux-node5-master-mysql xcache-3.1.2]# man -M /usr/local/php/php/man phpize #查看帮助手册
+[root@Linux-node5-master-mysql xcache-3.1.2]# pwd  #必须在此路径下，然后使用phpize命令
+/download/xcache-3.1.2
+#[root@Linux-node5-master-mysql xcache-3.1.2]# /usr/local/php/bin/phpize #所有php扩展编译前必须使用phpize命令，让扩展识别php
+Configuring for:
+PHP Api Version:         20100412
+Zend Module Api No:      20100525
+Zend Extension Api No:   220100525
+#编译xcache:
+[root@Linux-node5-master-mysql xcache-3.1.2]# ./configure --enable-xcache --with-php-config=/usr/local/php/bin/php-config
+注：
+--prefix #这项是不写的，xcache默认会安装在php的扩展路径下的
+--enable-xcache  #为开启xcache
+--with-php-config=/usr/local/php/bin/php-config  #通过指定--with-php-config路径来获取php在编译时开启了哪些功能。因为php安装的配置信息等不在默认路径下，所以告诉xcache,不然xcache找不到的。
+[root@Linux-node5-master-mysql xcache-3.1.2]# make install
+Installing shared extensions:     /usr/local/php-5.4.13/lib/php/extensions/no-debug-zts-20100525/  #安装扩展的路径
+[root@Linux-node5-master-mysql xcache-3.1.2]# ls /download/xcache-3.1.2
+ xcache.ini  #xcache提供的样例性配置文件
+[root@Linux-node5-master-mysql xcache-3.1.2]# mkdir /etc/php.d #新建php.d目录，目录下配置文件会被php.ini主配置加载
+[root@Linux-node5-master-mysql xcache-3.1.2]# cp xcache.ini /etc/php.d/ #复制xcache.ini配置文件到/etc/php.d/目录下
+
+[xcache-common]
+;; non-Windows example:
+#extension = xcache.so
+extension = /usr/local/php-5.4.13/lib/php/extensions/no-debug-zts-20100525/xcache.so #把上面的行改成xcache的扩展目录，上面xcache安装成功后有返回的
+[xcache.admin]
+xcache.admin.enable_auth = On #是否开启管理员认证
+; use http://xcache.lighttpd.net/demo/cacher/mkpassword.php to generate your encrypted password
+xcache.admin.user = "mOo" #管理员姓名
+xcache.admin.pass = "md5 encrypted password" #管理员密码
+[xcache]
+; ini only settings, all the values here is default unless explained
+; select low level shm implemenation
+xcache.shm_scheme =        "mmap"  #使用哪种方式共享内存，使用mmap方式
+; to disable: xcache.size=0
+; to enable : xcache.size=64M etc (any size > 0) and your system mmap allows
+xcache.size  =               60M  #opcode存储器大小
+; set to cpu count (cat /proc/cpuinfo |grep -c processor)
+xcache.count =                 1  #cpu个数
+; just a hash hints, you can always store count(items) > slots
+xcache.slots =                8K  #存储器缓存槽位，有多少个缓存来缓存opcode,槽位大小为8K
+; ttl of the cache item, 0=forever
+xcache.ttl   =                 0  #过期时间，0表示永远不过期，由xcache自我管理
+; interval of gc scanning expired items, 0=no scan, other values is in seconds
+xcache.gc_interval =           0  #垃圾回收器多久工作一次，0表示不做任何扫描的。
+; same as aboves but for variable cache
+xcache.var_size  =            4M  #变量缓存多大
+xcache.var_count =             1  #变量缓存多少个
+xcache.var_slots =            8K  #变量缓槽位大小
+; default value for $ttl parameter of xcache_*() functions
+xcache.var_ttl   =             0
+; hard limit ttl that cannot be exceed by xcache_*() functions. 0=unlimited
+xcache.var_maxttl   =          0
+xcache.var_gc_interval =     300
+; mode:0, const string specified by xcache.var_namespace
+; mode:1, $_SERVER[xcache.var_namespace]
+; mode:2, uid or gid (specified by xcache.var_namespace)
+xcache.var_namespace_mode =    0
+xcache.var_namespace =        ""
+; N/A for /dev/zero
+xcache.readonly_protection = Off
+; for *nix, xcache.mmap_path is a file path, not directory. (auto create/overwrite)
+; Use something like "/tmp/xcache" instead of "/dev/*" if you want to turn on ReadonlyProtection
+; different process group of php won't share the same /tmp/xcache
+; for win32, xcache.mmap_path=anonymous map name, not file path
+xcache.mmap_path =    "/dev/zero"
+; Useful when XCache crash. leave it blank(disabled) or "/tmp/phpcore/" (writable by php)
+xcache.coredump_directory =   ""
+; Windows only. leave it as 0 (default) until you're told by XCache dev
+xcache.coredump_type =         0
+; disable cache after crash
+xcache.disable_on_crash =    Off
+; enable experimental documented features for each release if available
+xcache.experimental =        Off
+; per request settings. can ini_set, .htaccess etc
+xcache.cacher =               On  #xcache缓存功能是否启用
+xcache.stat   =               On  
+xcache.optimizer =           Off  #xcache自身优化器是否启用，不用启用
+[xcache.coverager]
+; enabling this feature will impact performance
+; enabled only if xcache.coverager == On && xcache.coveragedump_directory == "non-empty-value"
+; per request settings. can ini_set, .htaccess etc
+; enable coverage data collecting and xcache_coverager_start/stop/get/clean() functions
+xcache.coverager =           Off
+xcache.coverager_autostart =  On
+; set in php ini file only
+; make sure it's readable (open_basedir is checked) by coverage viewer script
+xcache.coveragedump_directory = ""
+                               
+注：xcache配置标注的要改和留意，其他未改的为默认
+[root@Linux-node5-master-mysql xcache-3.1.2]# service httpd restart  #要想使xcache生效，必须重启web服务器。
+[root@Linux-node5-master-mysql xcache-3.1.2]# cat /usr/local/apache/htdocs/index.php
+<html><body><h1>It works!</h1></body></html>
+<?php
+        $conn=mysql_connect('localhost','root','');
+        if ($conn)
+                echo "Success...";
+        else
+                echo "Faild.....";
+phpinfo();   #加入此行，要看xcache是否开启，然后打开网页测试
+?>
+http://192.168.1.238   #查看opcode cache是否开启，如下则为开启了xcaches
+Opcode Cache 	enabled, 62,914,560 bytes, 1 split(s), with 8192 slots each 
+
+#虚拟主机：
 
 
 
