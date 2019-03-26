@@ -1,4 +1,4 @@
-#LAMP
+﻿#LAMP
 <pre>
 ###WEB服务及http协议
 
@@ -900,7 +900,7 @@ access_log  error_log   #此时已经更改成功
 [root@Linux-node5-master-mysql apache]# ls /var/run/httpd.pid 
 /var/run/httpd.pid  #更改的位置
 httpd服务脚本：
-[root@Linux-node5-master-mysql init.d]# cat /etc/init.d/httpd
+[root@Linux-node5-master-mysql init.d]# cat /etc/init.d/httpd #适合于redhat 5.8
 -----------------
 #!/bin/bash
 
@@ -992,9 +992,307 @@ exit $RETVAL
 [root@Linux-node5-master-mysql bin]# vim /etc/profile.d/httpd.sh
 export PATH=$PATH:/usr/local/apache/bin #加一行变量
 [root@Linux-node5-master-mysql bin]# . /etc/profile.d/httpd.sh #使变量生效
+也可使用apachectl自带的脚本，一步轻松搞定：
+[root@Linux-node5-master-mysql init.d]# ln -s /usr/local/apache/bin/apachectl httpd
+注:软链接后可使用service httpd start|stop|status|restart来启动服务
+[root@Linux-node5-master-mysql init.d]# chkconfig --add httpd
+service httpd does not support chkconfig
+--------------
+在vi /etc/rc.d/init.d/httpd 添加(#!/bin/sh下面)
+#chkconfig: 2345 10 90
+#description: Activates/Deactivates Apache Web Server
+--------------
+
 [root@Linux-node5-master-mysql bin]# vim /etc/httpd/httpd.conf #修改为prefork模式，重启服务生效
 #LoadModule mpm_event_module modules/mod_mpm_event.so
  LoadModule mpm_event_module modules/mod_mpm_event.so #修改当前行
+
+#httpd2.4新特性
+1. MPM可于运行时加载：--enable-mpms-shared=all --with-mpm=event。前者是开启多模块，后者指定运行的模块
+2. 支持Event MPM
+3. 异步读写：可以大大的提升httpd的性能
+4. 在每模块及每目录上可以指定日志级别
+5. 可以实现每请求配置：<if><elseif><esle>比如你请求的文件，我可以对某个文件进行授权
+6. 增加的表达式分析器
+7. 支持毫秒级的KeepAlive Timeout:以前只支持秒，现在到毫秒级
+8. 基于域名的虚拟主机不再需要NameVirtualHost指令
+9. 降低了内存占用
+10. 支持在配置文件中使用自定义变量
+11. 
+对于基于IP的访问控制：
+以前2.2版本httpd:
+Order allow,deny
+allow from all
+现在2.4版本不再支持2.2版本写法，使用Require:
+Require ip IPADDR  #172.168.0.0/255.255.255.0 = 172.168.0.0/16 = 172.16
+Require host HOSTNAME  #www.magedu.com   .magedu.com
+Require user USERNAME
+Require group GROUPNAME
+Require all granted  #授权所有主机访问
+Require all deny  #拒绝所有主机访问
+注：如果拒绝主机或用户访问等，在Require后面加not取反即可，例：Require not ip IPADDR,配置规则是自上而下和最佳配置来完成的。
+
+2.4新增加的模块：
+mod_proxy_fcgi  #--enable--modules=most 这个是开启fastCGI的
+mod_proxy_acgi
+mod_proxy_express
+mod_remoteip
+mod_session
+mod_ratelimit
+mod_request
+等等：
+注：2.2版本的httpd有mod_proxy，像mod_proxy_fcgi是没有的，在2.2版本上要使用需要额外安装第三方模块。在2.4版本支持编译安装了。mod_proxy_*等是对mod_proxy的补充
+
+
+
+##Mysql编译安装
+#mysql-5.5的编译安装
+[root@Linux-node5-master-mysql download]# wget https://dev.mysql.com/get/Downloads/MySQL-5.5/mysql-5.5.62-linux-glibc2.12-x86_64.tar.gz #下载mysql-5.5通用二进制
+[root@Linux-node5-master-mysql download]# wget https://dev.mysql.com/get/Downloads/MySQL-5.6/mysql-5.6.43-linux-glibc2.12-x86_64.tar.gz  #下载mysql-5.6通用二进制
+[root@Linux-node5-master-mysql download]# tar -xf mysql-5.5.62-linux-glibc2.12-x86_64.tar.gz -C /usr/local #通用二进制格式解压就能用，官方要求解压的包必须在/usr/local下,并且目录名称为mysql才行
+[root@Linux-node5-master-mysql local]# ln -s mysql-5.5.62-linux-glibc2.12-x86_64/ mysql
+[root@Linux-node5-master-mysql mysql]# pwd
+/usr/local/mysql
+[root@Linux-node5-master-mysql mysql]# ll -h
+total 44K
+drwxr-xr-x  2 root root  4.0K Mar 26 11:27 bin
+-rw-r--r--  1 7161 31415  18K Aug 29  2018 COPYING
+drwxr-xr-x  3 root root    18 Mar 26 11:27 data
+drwxr-xr-x  2 root root    55 Mar 26 11:27 docs
+drwxr-xr-x  3 root root  4.0K Mar 26 11:27 include
+-rw-r--r--  1 7161 31415  301 Aug 29  2018 INSTALL-BINARY
+drwxr-xr-x  3 root root   316 Mar 26 11:27 lib
+drwxr-xr-x  4 root root    30 Mar 26 11:27 man
+drwxr-xr-x 10 root root   291 Mar 26 11:27 mysql-test
+-rw-r--r--  1 7161 31415 2.5K Aug 29  2018 README
+drwxr-xr-x  2 root root    30 Mar 26 11:27 scripts
+drwxr-xr-x 27 root root  4.0K Mar 26 11:27 share
+drwxr-xr-x  4 root root  4.0K Mar 26 11:27 sql-bench
+drwxr-xr-x  2 root root   325 Mar 26 11:27 support-files
+创建mysql用户及mysql组：
+[root@Linux-node5-master-mysql mysql]# groupadd -r -g 306 mysql #-r为系统用户，-g为指定gid
+[root@Linux-node5-master-mysql mysql]# useradd -g 306 -r -u 306 mysql #-r为系统用户，-u为uid,-g为gid
+[root@Linux-node5-master-mysql mysql]# id mysql
+uid=306(mysql) gid=306(mysql) groups=306(mysql)
+[root@Linux-node5-master-mysql mysql]# grep mysql /etc/passwd
+mysql:x:306:306::/home/mysql:/bin/bash #shell为/bin/bash，mysql为系统用户，所有是没有用户目录的
+[root@Linux-node5-master-mysql mysql]# less INSTALL-BINARY #查看二进制的安装手册，
+[root@Linux-node5-master-mysql mysql]# chown -R mysql:mysql ./* #改变mysql属主和属组
+[root@Linux-node5-master-mysql mysql]# scripts/mysql_install_db --help  #mysql_install_db这个脚本是初始化mysql的，初始化完才能使用mysql服务，yum安装时只需要服务启动就是初始化了
+--user=user_name  #初始化时使用的用户
+--datadir=path    #初始化时指定数据库路径，推荐使用LVM逻辑卷存储
+[root@Linux-node5-master-mysql mysql]# mkdir /mydata/data -p #这里用系统卷测试
+[root@Linux-node5-master-mysql mydata]# chmod o-rx data/ #设置其他用户无读和执行权限
+[root@Linux-node5-master-mysql mydata]# ll
+total 0
+drwxr-x--- 2 mysql mysql 6 Mar 26 13:40 data
+[root@Linux-node5-master-mysql mysql]# scripts/mysql_install_db --user=mysql --datadir=/mydata/data #初始化mysql
+[root@Linux-node5-master-mysql mysql]# chown -R root /usr/local/mysql/* #未避免mysql用户被攻破，所以这里把属主还改成root
+[root@Linux-node5-master-mysql mysql]# ll
+total 44
+drwxr-xr-x  2 root mysql  4096 Mar 26 11:27 bin
+-rw-r--r--  1 root mysql 17987 Aug 29  2018 COPYING
+drwxr-xr-x  3 root mysql    18 Mar 26 11:27 data
+drwxr-xr-x  2 root mysql    55 Mar 26 11:27 docs
+drwxr-xr-x  3 root mysql  4096 Mar 26 11:27 include
+-rw-r--r--  1 root mysql   301 Aug 29  2018 INSTALL-BINARY
+drwxr-xr-x  3 root mysql   316 Mar 26 11:27 lib
+drwxr-xr-x  4 root mysql    30 Mar 26 11:27 man
+drwxr-xr-x 10 root mysql   291 Mar 26 11:27 mysql-test
+-rw-r--r--  1 root mysql  2496 Aug 29  2018 README
+drwxr-xr-x  2 root mysql    30 Mar 26 11:27 scripts
+drwxr-xr-x 27 root mysql  4096 Mar 26 11:27 share
+drwxr-xr-x  4 root mysql  4096 Mar 26 11:27 sql-bench
+drwxr-xr-x  2 root mysql   325 Mar 26 11:27 support-files
+[root@Linux-node5-master-mysql support-files]# cp mysql.server /etc/init.d/mysqld #将mysql提供的启动脚本复制到/etc/init.d/目录下，叫mysqld
+[root@Linux-node5-master-mysql support-files]# ls /etc/init.d/mysqld -l
+-rwxr-xr-x 1 root root 10565 Mar 26 13:47 /etc/init.d/mysqld
+[root@Linux-node5-master-mysql support-files]# chkconfig --add mysqld #将mysqld加入chkconfig下
+[root@Linux-node5-master-mysql support-files]# chkconfig --list mysqld #默认2345启动
+mysqld          0:off   1:off   2:on    3:on    4:on    5:on    6:off
+#mysql的配置文件：/etc/my.cnf
+mysql为集中式配置文件，为多个程序提供配置：
+[mysql] #为mysql客户端设置配置文件
+[mysqld] #为服务端设置配置文件
+[client] #为所有客户端程序设置的，例如mysql,mysqladmin等
+注：mysql找配置文件次序：1./etc/my.cnf。2./etc/mysql/my.cnf（mysql进程目录）。3.$BASEDIR/my.cnf。4.~/.my.cnf（mysql没有家目录，没有就忽略）。----越后面的配置文件会覆盖前面的配置文件，以最后一个为准，如果没有配置文件mysql也可以跑起来，因为它有默认定义的。
+[root@Linux-node5-master-mysql support-files]# ls #mysql默认提供了5种配置文件
+binary-configure   my-huge.cnf             mysqld_multi.server
+config.huge.ini    my-innodb-heavy-4G.cnf  mysql-log-rotate
+config.medium.ini  my-large.cnf            mysql.server
+config.small.ini   my-medium.cnf           ndb-config-2-node.ini
+magic              my-small.cnf
+[root@Linux-node5-master-mysql support-files]# cp my-huge.cnf /etc/my.cnf #选择自己配置的配置文件到/etc下改名为my.cnf
+[root@Linux-node5-master-mysql support-files]# vim /etc/my.cnf
+socket          = /tmp/mysql.sock  #mysql的锁文件
+thread_concurrency = 4 #线程并发数，等于cpu个数X2
+datadir = /mydata/data #因为你改过数据库目录，所以这里要写明数据库目录
+[root@Linux-node5-master-mysql support-files]# service mysqld start  #正式启动mysqld服务
+Starting MySQL.Logging to '/mydata/data/Linux-node5-master-mysql.err'.
+. SUCCESS! 
+[root@Linux-node5-master-mysql support-files]# netstat -tnlp  #查看是否启动正常
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 0.0.0.0:10050           0.0.0.0:*               LISTEN      10106/zabbix_agentd 
+tcp        0      0 0.0.0.0:3306            0.0.0.0:*               LISTEN      1605/mysqld         
+tcp        0      0 0.0.0.0:111             0.0.0.0:*               LISTEN      560/rpcbind         
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      10893/sshd          
+tcp6       0      0 :::10050                :::*                    LISTEN      10106/zabbix_agentd 
+tcp6       0      0 :::111                  :::*                    LISTEN      560/rpcbind         
+tcp6       0      0 :::22                   :::*                    LISTEN      10893/sshd          
+[root@Linux-node5-master-mysql support-files]# mysql #用mysql连接mysqld服务端。通用二进制mysql装的时候mysql客户端也一起装的
+MySQL [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |  #nformation_schema就像是MySQL实例的一个百科全书，记录了数据库当中大部分我们需要了结的信息
+| mysql              |
+| performance_schema |  #这是一个系统状态信息收集库，比如哪些用户连接进来过，哪个用户连接进来后服务端发送了多少流量出去
+| test               |
++--------------------+
+
+#mysql服务器维持了两类变量：
+#1.服务器变量：定义mysql服务器运行特性，改变服务器运行状态的。
+SHOW GLOBAL VARIABLES
+MySQL [(none)]> SHOW GLOBAL VARIABLES LIKE 'basedir';
+MySQL [(none)]> SHOW GLOBAL VARIABLES LIKE 'data%';
+#2.状态变量：保存了mysql服务器运行的统计数据
+SHOW GLOBAL STATUS
+MySQL [(none)]> show global status;
+ Bytes_received                           | 422         |  #显示mysql服务启动到现在接收了多少字数
+| Bytes_sent                               | 19551       | #显示mysql服务启动到现在发送了多少字节
+MySQL [(none)]> select version();  #查看mysql版本
++------------+
+| version()  |
++------------+
+| 5.5.62-log |
++------------+
+MySQL [mysql]> select database(); #查看默认数据库
++------------+
+| database() |
++------------+
+| mysql      |
++------------+
+MySQL [mysql]> SELECT USER(); #查看当前用户
++----------------+
+| USER()         |
++----------------+
+| root@localhost |
++----------------+
+MySQL [(none)]> SHOW GLOBAL STATUS LIKE '%select%';
++------------------------+-------+
+| Variable_name          | Value |
++------------------------+-------+
+| Com_insert_select      | 0     |
+| Com_replace_select     | 0     |
+| Com_select             | 8     |  #服务启动到现在执行了8个select语句
+| Select_full_join       | 0     |
+| Select_full_range_join | 0     |
+| Select_range           | 0     |
+| Select_range_check     | 0     |
+| Select_scan            | 11    |
++------------------------+-------+
+注：以后调优mysql主要集中在服务器变量和状态变量上，调优mysql需要调节服务器变量，测试状态变量性能是否提升
+#导出帮助文件路径
+vim /etc/man.config #编辑man的配置文件
+MANPATH /usr/local/mysql/man  #添加mysql的帮助手册 
+#导出库文件
+[root@Linux-node5-master-mysql mysql]# vim /etc/ld.so.conf.d/mysql.conf
+/usr/local/mysql/lib  #添加mysql的库文件路径即可
+[root@Linux-node5-master-mysql mysql]# ldconfig -v #同步库文件
+#内核到哪去找库文件：开机自动找到库文件然后缓存到/etc/ld.so.cache中，刚才新建的没有缓存，ldconfig让操作系统重新建立库文件缓存的。
+#导出头文件
+[root@Linux-node5-master-mysql mysql]# ln -sv /usr/local/mysql/include /usr/include/mysql #把include头文件软链接到/usr/include/下
+注意：导出帮助文件，导出库文件，导出头文件不是必须的，只是不这样做某些功能实现不了
+
+
+
+#PHP编译安装：
+#php3种功能模式：CGI,php_mod,fastCGI  #对于apache而言，最简单的还是php_mod
+#怎么把php安装成为httpd的模块？
+------------
+./configure \
+--prefix=/usr/local/php \   #安装目录
+--with-mysql=/usr/local/mysql \  #告诉mysql在哪个位置
+--with-openssl \   #开启openssl功能
+--with-mysqli=/usr/local/mysql/bin/mysql_config \ #mysql另外一种接口，让php和mysql交互的接口，接口程序是/usr/local/mysql/bin/mysql_config
+--enable-mbstring \ #多字节string,支持中文或非一个字节能表示字符的语言的
+--with-freetype-dir \  #加载freetype的头文件，支持freetype的功能，让你能引用特定字体的。
+--with-jpeg-dir \ #支持jpeg图片
+--with-png-dir \  #支持png图片
+--with-zlib \  #互联网常用的通用的压缩库，让文件先压缩再传送，节约带宽
+--with-libxml-dir=/usr \  #告诉xml的库在什么地方
+--enable-xml \  #开启xml功能（扩展标记语言），实现系统数据交换的
+--enable-sockets \  #让php支持基于套接字通信
+--with-apxs2=/usr/local/apache/bin/apxs \  #基于apxs的勾子能够实现让php编译成httpd的模块
+--with-mcrypt \  #支持加密功能的，额外的加密库
+--with-config-file-path=/etc \  #php的主配置文件php.ini目录
+--with-config-file-scan-dir=/etc/php.d \  #php的配置文件目录，在主文件中include /etc/php.d进来的
+--with-bz2 \  #压缩库
+--enable-maintainer-zts  #要不要用取决于httpd是什么类型的，如果httpd以进程工作(prefork)则不需要，如果以线程(worker或event)才需要用他
+--------------
+[root@Linux-node5-master-mysql php-5.4.13]# httpd -M
+Loaded Modules:
+ core_module (static)
+ so_module (static)
+ http_module (static)
+ mpm_event_module (shared)  #说明现在httpd现在是event模式
+ authn_file_module (shared)
+ authn_core_module (shared)
+ authz_host_module (shared)
+ authz_groupfile_module (shared)
+ authz_user_module (shared)
+ authz_core_module (shared)
+ access_compat_module (shared)
+ auth_basic_module (shared)
+ reqtimeout_module (shared)
+ filter_module (shared)
+ mime_module (shared)
+ log_config_module (shared)
+ env_module (shared)
+ headers_module (shared)
+ setenvif_module (shared)
+ version_module (shared)
+ unixd_module (shared)
+ status_module (shared)
+ autoindex_module (shared)
+ dir_module (shared)
+ alias_module (shared)
+
+编译php成模块模式:
+[root@Linux-node5-master-mysql php-5.4.13]# ./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --with-apxs2=/usr/local/apache/bin/apxs --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 --enable-maintainer-zts
+
+#报错：configure: error: xml2-config not found. Please check your libxml2 installation.----提示检查libxml2安装包
+注意：这个时候可以去google搜索，也可以去http://rpmfind.net/这里找
+[root@Linux-node5-master-mysql php-5.4.13]# rpm -qa | grep libxml2
+libxml2-2.9.1-6.el7_2.3.x86_64
+libxml2-python-2.9.1-6.el7_2.3.x86_64
+[root@Linux-node5-master-mysql php-5.4.13]# yum list all | grep libxml2
+Trying other mirror.
+libxml2.x86_64                          2.9.1-6.el7_2.3          @anaconda      
+libxml2-python.x86_64                   2.9.1-6.el7_2.3          @anaconda      
+libxml2.i686                            2.9.1-6.el7_2.3          base           
+libxml2-devel.i686                      2.9.1-6.el7_2.3          base     #是这个包没有安装       
+libxml2-devel.x86_64                    2.9.1-6.el7_2.3          base           
+libxml2-static.i686                     2.9.1-6.el7_2.3          base           
+libxml2-static.x86_64                   2.9.1-6.el7_2.3          base        
+安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libxml2-devel.x86_64 
+报错：configure: error: Please reinstall the BZip2 distribution
+安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y bzip2-devel.x86_64
+报错：configure: error: mcrypt.h not found. Please reinstall libmcrypt.
+安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libmcrypt libmcrypt-devel
+[root@Linux-node5-master-mysql php-5.4.13]# echo $?  #最后编译完成成功
+0
+[root@Linux-node5-master-mysql php-5.4.13]# make && make install #安装
+
+/etc/php.ini
+/etc/php.d.ini
+#需不需要启动php服务？
+如果做成了模块就不需要，如果做成了fastCGI则需要启动服务。
+#如何做成fastCGI模式？
+把php编译成fastCGI模式：
+[root@Linux-node5-master-mysql php-5.4.13]# ./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 --enable-maintainer-zts
+注：把--with-apxs2=/usr/local/apache/bin/apxs这项去掉，换成--enable-fpm，只能开启一个模式
 
 
 
