@@ -1,4 +1,4 @@
-﻿#LAMP
+#LAMP
 <pre>
 ###一、WEB服务及http协议
 
@@ -1773,9 +1773,45 @@ httpd必须提供fastCGI模块，叫做fcgi
 #把mysql和php都卸载了，只保留了apache2.4，重新安装mysql和php
 
 
+#安装mysql
+
+#安装php的fastCGI
+./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 #--enable-fpm 这个是开启fastCGI模型，--with-apxs2=/usr/local/apache/bin/apxs必须关掉
+make && make install 
+#为php-fpm提供init脚本
+cp sapi/fpm/init.d.php-fpm /etc/rc.d/init.d/php-fpm
+chmod +x /etc/rc.d/init.d/php-fpm
+chkconfig --add php-fpm
+chkconfig php-fpm on
+#为php-fpm提供配置文件
+cp /usr/local/php/etc/ph/p-fpm.conf.default /usr/local/php/etc/php-fpm.conf
+#编辑php-fpm的配置文件
+vim /usr/local/php/etc/php-fpm.conf
+配置fpm的相关选项为你所需的值，并启用pid文件
+pm.max_children = 50 #最多几个子进程
+pm.start_servers = 5
+pm.min_spare_servers = 2
+pm.max_spare_servers = 8
+pid = /usr/local/php/var/run/php-fpm.pid
+#fastCGI默认监听127.0.0.1:9000端口
+service php-fpm start 
 
 
-
+#配置httpd
+1. 开启mod_proxy_fcgi.so和mod_proxy.so两个模块
+2. 配置虚拟主机支持使用fcgi
+在相应的虚拟主机中添加类似如下两行： 
+ ProxyRequests Off
+ ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/PATH/TO/DOCUMENT_ROOT/$1
+例如：
+ProxyRequests Off  #关闭正向代理功能
+ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/megedu.com/$1 #只要匹配到以/开头，以.php结尾的文件就转发到fcgi://127.0.0.1:9000/www/megedu.com/$1路径，$1表示的是你所请求的文件
+添加php类型：
+AddType application/x-httpd-php .php
+AddType application/x-httpd-php-source .phps
+添加index.php主页
+DocumentRoot index.php index.html 
+#配置xcache
 
 
 </pre>
