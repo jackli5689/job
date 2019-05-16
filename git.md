@@ -563,7 +563,7 @@ To github.com:michaelliao/learngit.git
 1. 首先用ssh-keygen -t rsa 生成用户密钥，然后把生成的公钥信息复制添加到你的github网站帐户上，路径：your profile---edit profile---SSH and GPG keys---New SSH keys
 2. 使用命令：连接远程github帐户:
 	<pre>git remote add origin git@github.com:jackli5689/learngit.git
-	git remote add origin https://github.com/jackli5689/learngit.git
+	git remote add origin https://github.com/jackli5689/learngit.git </pre>
 	-----两种方法都可以，ssh协议比http协议更快
 17. git clone git@github.com:jackli5689/gitskiils.git  --克隆仓库
 18. 当你直接使用git rm test.txt删除远程库的内容时，这时不会直接更新，当你在下次git push origin master时才会触发更新

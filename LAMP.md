@@ -1,4 +1,4 @@
-#LAMP
+﻿#LAMP
 <pre>
 ###一、WEB服务及http协议
 
@@ -820,7 +820,10 @@ make && make install #安装
 --enable-cgid   #开启CGI给线程使用的，worker或event MPM使用
 #编译安装httpd:
 yum install -y pcre-devel  #安装httpd-2.4.38.tar.bz2时需要解决依赖关系
+#collect2: error: ld returned 1 exit status #报这个错
 yum install -y libxml2-devel #安装httpd-2.4.10.tar.gz时出错需要这个依赖
+#注意：缺少了xml相关的库，需要安装libxml2-devel包。直接安装并不能解决问题，因为httpd调用的apr-util已经安装好了，但是apr-util并没有libxml2-devel包支持。
+
 [root@Linux-node5-master-mysql httpd-2.4.38]# ./configure --prefix=/usr/local/httpd-2.4.38 --sysconfdir=/etc/httpd --enable-so --enable-rewrite --enable-ssl --enable-cgi --enable-cgid --enable-modules=most --enable-mods-shared=most --enable-mpms-shared=all --with-mpm=event --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util
 make && make install #安装
 
@@ -1252,10 +1255,10 @@ libxml2-devel.i686                      2.9.1-6.el7_2.3          base     #是�
 libxml2-devel.x86_64                    2.9.1-6.el7_2.3          base           
 libxml2-static.i686                     2.9.1-6.el7_2.3          base           
 libxml2-static.x86_64                   2.9.1-6.el7_2.3          base        
-安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libxml2-devel.x86_64 
-报错：configure: error: Please reinstall the BZip2 distribution
+#安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libxml2-devel.x86_64 
+#报错：configure: error: Please reinstall the BZip2 distribution
 安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y bzip2-devel.x86_64
-报错：configure: error: mcrypt.h not found. Please reinstall libmcrypt.
+#报错：configure: error: mcrypt.h not found. Please reinstall libmcrypt.
 安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libmcrypt libmcrypt-devel
 [root@Linux-node5-master-mysql php-5.4.13]# echo $?  #最后编译完成成功
 0
@@ -1314,8 +1317,6 @@ XCache资源网站：https://xcache.lighttpd.net/
 下载XCache:wget https://xcache.lighttpd.net/pub/Releases/3.1.2/xcache-3.1.2.tar.gz
 [root@Linux-node5-master-mysql download]# tar  xf xcache-3.1.2.tar.gz
 [root@Linux-node5-master-mysql download]# cd xcache-3.1.2/
-php支持扩展功能：xcache,  #所有的扩展在编译之前都要执行phpize命令的
-让php命令加载xcache:
 [root@Linux-node5-master-mysql xcache-3.1.2]# ls /usr/local/php/php/man/man1/
 php.1  php-config.1  phpize.1 
 [root@Linux-node5-master-mysql xcache-3.1.2]# man -M /usr/local/php/php/man phpize #查看帮助手册
@@ -1332,13 +1333,13 @@ Zend Extension Api No:   220100525
 --prefix #这项是不写的，xcache默认会安装在php的扩展路径下的
 --enable-xcache  #为开启xcache
 --with-php-config=/usr/local/php/bin/php-config  #通过指定--with-php-config路径来获取php在编译时开启了哪些功能。因为php安装的配置信息等不在默认路径下，所以告诉xcache,不然xcache找不到的。
-[root@Linux-node5-master-mysql xcache-3.1.2]# make install
+[root@Linux-node5-master-mysql xcache-3.1.2]# make && make install
 Installing shared extensions:     /usr/local/php-5.4.13/lib/php/extensions/no-debug-zts-20100525/  #安装扩展的路径
 [root@Linux-node5-master-mysql xcache-3.1.2]# ls /download/xcache-3.1.2
  xcache.ini  #xcache提供的样例性配置文件
 [root@Linux-node5-master-mysql xcache-3.1.2]# mkdir /etc/php.d #新建php.d目录，目录下配置文件会被php.ini主配置加载
 [root@Linux-node5-master-mysql xcache-3.1.2]# cp xcache.ini /etc/php.d/ #复制xcache.ini配置文件到/etc/php.d/目录下
-
+vim /etc/php.d/xcache.ini 
 [xcache-common]
 ;; non-Windows example:
 #extension = xcache.so
@@ -1767,16 +1768,63 @@ SSLRandomSeed connect builtin
 
 
 
+
+
 ###httpd以fastCGI方式与php整合
 httpd必须提供fastCGI模块，叫做fcgi
 --enable--modules=most  #能够实现编译绝大多数的模块
 #把mysql和php都卸载了，只保留了apache2.4，重新安装mysql和php
 
-
 #安装mysql
+解压mysql:
+[root@lamp download]# tar xf mysql-5.6.43-linux-glibc2.12-x86_64.tar.gz  -C /usr/local/mysql
+groupadd -r -g 306 mysql
+useradd -r -g 306 -u 306 mysql
+chown -R mysql.mysql /usr/local/mysql/*
+mkdir /mydata/data && chown -R mysql.mysql /mydata
+[root@lamp mysql]# /usr/local/mysql/scripts/mysql_install_db --user=mysql --data-dir=/mydata/data #初始化数据库
+[root@lamp mysql]# cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysqld #复制mysql启动脚本
+[root@lamp mysql]# chkconfig --add mysqld 
+[root@lamp mysql]# chkconfig --level 2345 on
+[root@lamp mysql]# touch /mydata/mysql-error.log #注意，mysql编译的日志及pid等目录权限必须要有可写读写权限，否则不会启动成功
+[root@lamp mydata]# chown -R root.mysql var
+[root@lamp mydata]# chown -R root.mysql /var
+[root@lamp mydata]# chmod 775 -R /var
+[root@lamp mydata]# cat /etc/profile.d/mysqld.sh 
+export PATH=$PATH:/usr/local/mysql/bin  #加入mysql指令变量
+[root@lamp mydata]# . /etc/profile.d/mysqld.sh 
+
+
+----------------------
+[root@lamp mysql]# cat /etc/my.cnf
+[mysqld]
+datadir=/mydata/data
+socket=/mydata/mysql.sock
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+# Settings user and group are ignored when systemd is used.
+# If you need to run mysqld under a different user or group,
+# customize your systemd unit file for mariadb according to the
+# instructions in http://fedoraproject.org/wiki/Systemd
+
+[mysqld_safe]
+log-error=/mydata/mysql-error.log
+pid-file=/mydata/mysqld.pid
+
+#
+# include all files from the config directory
+#
+!includedir /etc/my.cnf.d
+---------------------
 
 #安装php的fastCGI
-./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 #--enable-fpm 这个是开启fastCGI模型，--with-apxs2=/usr/local/apache/bin/apxs必须关掉
+#php下载地址：https://www.php.net/releases/
+#安装php-7.1.26版本：
+./configure --prefix=/usr/local/php-7.1.26 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 #--enable-fpm 这个是开启fastCGI模型，--with-apxs2=/usr/local/apache/bin/apxs必须关掉,只能选其一，--enable-maintainer-zts这项开启线程的也关掉，fastCGI不使用线程，
+#checking for BZip2 in default path... not found configure: error: Please reinstall the BZip2 distribution #报这个错
+yum -y install bzip2-devel #安装bzip2-devel包解决依赖
+#configure: error: mcrypt.h not found. Please reinstall libmcrypt#报错
+[root@lamp php-7.1.26]# yum install libmcrypt-devel -y #安装libmcrypt-devel解决依赖
 make && make install 
 #为php-fpm提供init脚本
 cp sapi/fpm/init.d.php-fpm /etc/rc.d/init.d/php-fpm
@@ -1786,19 +1834,34 @@ chkconfig php-fpm on
 #为php-fpm提供配置文件
 cp /usr/local/php/etc/ph/p-fpm.conf.default /usr/local/php/etc/php-fpm.conf
 #编辑php-fpm的配置文件
-vim /usr/local/php/etc/php-fpm.conf
-配置fpm的相关选项为你所需的值，并启用pid文件
+#php-5.4.13的/usr/local/php/etc/php-fpm.conf配置：
+#vim /usr/local/php/etc/php-fpm.conf
 pm.max_children = 50 #最多几个子进程
 pm.start_servers = 5
 pm.min_spare_servers = 2
 pm.max_spare_servers = 8
 pid = /usr/local/php/var/run/php-fpm.pid
-#fastCGI默认监听127.0.0.1:9000端口
-service php-fpm start 
+#php-7.1.26的/usr/local/php/etc/php-fpm.conf配置：
+#[root@lamp php-fpm.d]# vim /usr/local/php/etc/php-fpm.conf
+pid = run/php-fpm.pid  #pid路径开启
+[root@lamp php-fpm.d]# vim /usr/local/php/etc/php-fpm.d/www.conf.default  #这个文件被include到php-fpm.conf中
+pm.max_children = 5 #最大几个子进程
+pm.start_servers = 2 #开始2个进程
+pm.min_spare_servers = 1 #最小空闲进程
+pm.max_spare_servers = 3 #最大空闲进程
+listen = 127.0.0.1:9000   #fastCGI默认监听127.0.0.1:9000端口
+[root@lamp php-fpm.d]# mv /usr/local/php/etc/php-fpm.d/www.conf.default www.conf #改名为*.conf
+service php-fpm start  #启动php-fpm
+[root@lamp php-fpm.d]# netstat -tnlp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:9000          0.0.0.0:*               LISTEN      11269/php-fpm: mast 
 
 
 #配置httpd
 1. 开启mod_proxy_fcgi.so和mod_proxy.so两个模块
+LoadModule proxy_module modules/mod_proxy.so
+LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
 2. 配置虚拟主机支持使用fcgi
 在相应的虚拟主机中添加类似如下两行： 
  ProxyRequests Off
@@ -1806,12 +1869,51 @@ service php-fpm start
 例如：
 ProxyRequests Off  #关闭正向代理功能
 ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/megedu.com/$1 #只要匹配到以/开头，以.php结尾的文件就转发到fcgi://127.0.0.1:9000/www/megedu.com/$1路径，$1表示的是你所请求的文件
-添加php类型：
+#虚拟主机配置：
+------------------------
+<VirtualHost 192.168.1.239:80>
+    DocumentRoot "/www/a.org/"
+    ServerName www.a.org
+    ErrorLog "/var/log/httpd/a.org-error_log"
+    CustomLog "/var/log/httpd/a.org-access_log" common
+    ProxyRequests Off
+    ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/a.org/$1
+    <Directory "www.a.org">
+        Options none
+        AllowOverride none
+        Require all granted
+    </Directory>
+</VirtualHost>
+------------------------
+#添加php类型：
+[root@lamp php-fpm.d]# vim /etc/httpd/httpd.conf 
 AddType application/x-httpd-php .php
 AddType application/x-httpd-php-source .phps
-添加index.php主页
-DocumentRoot index.php index.html 
-#配置xcache
+#DocumentRoot "/usr/local/httpd-2.4.10/htdocs" #注释取消中心主机
+Include /etc/httpd/extra/httpd-vhosts.conf #开启虚拟机配置文件
+<IfModule dir_module>
+    DirectoryIndex index.php index.html  #添加index.php主页
+</IfModule>
+Include /etc/httpd/extra/httpd-mpm.conf #开启mpm配置文件
+Include /etc/httpd/extra/httpd-vhosts.conf  #开启虚拟主机配置文件
+
+
+#配置xcache见之前的xcache配置
+[root@lamp xcache-3.1.2]# pwd
+/download/xcache-3.1.2
+[root@lamp xcache-3.1.2]# /usr/local/php/bin/phpize
+Configuring for:
+PHP Api Version:         20160303
+Zend Module Api No:      20160303
+Zend Extension Api No:   320160303
+
+[root@lamp xcache-3.1.2]# ./configure --enable-xcache --with-php-config=/usr/local/php/bin/php-config
+Installing shared extensions:     /usr/local/php-7.1.26/lib/php/extensions/no-debug-non-zts-20160303/ #记住这个xcache路径，xcache配置文件要用，non-zts这个说明不支持zts 
+报错：undefined symbol: core_globals_id in Unknown on line 0
+#注意：xcache高版本不支持，所以这里配置是用不了，最后是报错的。php7使用了opcache，为php自带
+
+
+
 
 
 </pre>
