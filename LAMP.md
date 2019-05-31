@@ -82,10 +82,10 @@ http/1.1：
 
 四种模型：
 1.单进程 2.多进程 3.单进程多请求 4.多进程多请求（最先进）
-#httpd的MPM模型:prefork(@2),worker(@#),event(@$)，mpm_winnt(windows专用)
+#httpd的MPM模型:prefork(@2),worker(@3),event(@4)，mpm_winnt(windows专用)
 Client:IE,Firefox,Chrome,Opera,Safari
 Server:Apache-httpd,IIS,nginx,lighttpd,thttpd
-应用程序服务器（是web服务器也是解释器）：IIS,Tomcat(apache,支持JSP,开源),Websphere(IBM,解析JSP，不开源)，Weblogic(Oracle,解析JSP，不开源),JBoss(RedHat,实际是Tomcat,只是包装了)
+应用程序服务器（是web服务器也是解释器）：IIS,Tomcat(支持JSP,开源),apache（httpd,开源）,Websphere(IBM,解析JSP，不开源)，Weblogic(Oracle,解析JSP，不开源),JBoss(RedHat,实际是Tomcat,只是包装了)
 全球web服务器统计（每半年统计一次）：https://www.netcraft.com/ 
 
 ###httpd：
@@ -740,6 +740,14 @@ MariaDB [mysql]> flush privileges; #由于mysql认证信息在驻留在内存当
 flush privileges;
 图形客户端：1.phpMyAdmin 2.Workbench 3.Mysql Front 4.navicat for mysql 5.toad
 装php-mysql的连接器(驱动)：[root@a019736cb441 conf.d]#yum install php-mysql
+yum install yum-utils -y
+[root@lamp 7]# repoquery -ql php-mysql
+/etc/php.d/mysql.ini
+/etc/php.d/mysqli.ini
+/etc/php.d/pdo_mysql.ini
+/usr/lib64/php/modules/mysql.so
+/usr/lib64/php/modules/mysqli.so
+/usr/lib64/php/modules/pdo_mysql.so
 [root@a019736cb441 conf.d]#cat /www/magedu2.com/index.php
 -----------------------
 <?php
@@ -752,7 +760,7 @@ flush privileges;
 ------------------------
 【1】下载phpMyAdmin测试：
 wget https://files.phpmyadmin.net/phpMyAdmin/3.4.3.2/phpMyAdmin-3.4.3.2-all-languages.tar.gz  #下载后解压到网站根目录下即可，php是不用重新启动的
-phpmyadmin：修改库文件夹下的config.default.php文件，指定mysql服务器地址
+phpmyadmin：修改libraries/config.default.php 文件，指定mysql服务器地址
 1，查找$cfg['PmaAbsoluteUri']，将其值设置为你本地的phpmyadmin路径
 2，查找$cfg['Servers'][$i]['host']，将其值设置为你mysql数据库地址，例如127.0.0.1
 3，查找$cfg['Servers'][$i]['user']，将其值设置为你mysql数据库用户名，例如admin
@@ -1184,10 +1192,9 @@ MANPATH /usr/local/mysql/man  #添加mysql的帮助手册
 [root@Linux-node5-master-mysql mysql]# ln -sv /usr/local/mysql/include /usr/include/mysql #把include头文件软链接到/usr/include/下
 注意：导出帮助文件，导出库文件，导出头文件不是必须的，只是不这样做某些功能实现不了
 
-
-
 #PHP编译安装：
 #php3种功能模式：CGI,php_mod,fastCGI  #对于apache而言，最简单的还是php_mod
+php5.6.12下载:wget https://www.php.net/distributions/php-5.6.12.tar.bz2
 #怎么把php安装成为httpd的模块？
 ------------
 ./configure \
@@ -1259,6 +1266,7 @@ libxml2-static.x86_64                   2.9.1-6.el7_2.3          base
 #报错：configure: error: Please reinstall the BZip2 distribution
 安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y bzip2-devel.x86_64
 #报错：configure: error: mcrypt.h not found. Please reinstall libmcrypt.
+[root@lamp php-5.6.12]# yum install epel-release
 安装依赖包：[root@Linux-node5-master-mysql php-5.4.13]# yum install -y libmcrypt libmcrypt-devel
 [root@Linux-node5-master-mysql php-5.4.13]# echo $?  #最后编译完成成功
 0
@@ -1272,6 +1280,32 @@ libxml2-static.x86_64                   2.9.1-6.el7_2.3          base
 把php编译成fastCGI模式：
 [root@Linux-node5-master-mysql php-5.4.13]# ./configure --prefix=/usr/local/php-5.4.13 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 --enable-maintainer-zts
 注：把--with-apxs2=/usr/local/apache/bin/apxs这项去掉，换成--enable-fpm，只能开启一个模式
+
+————————————————
+#查看nginx编译参数：/usr/local/nginx/sbin/nginx -V 查看apache编译参数：cat /usr/local/apache2/build/config.nice 查看mysql编译参数：cat /usr/local/mysql/bin/mysqlbug | grep CONFIGURE_LINE 查看php编译参数：/usr/local/php/bin/php -i | grep configure
+————————————————
+
+[root@lamp ~]# cat /usr/local/httpd-2.4.38/build/config.nice  #build目录下可查看编译时的参数
+#! /bin/sh
+#
+# Created by configure
+
+"./configure" \
+"--prefix=/usr/local/httpd-2.4.38" \
+"--sysconfdir=/etc/httpd" \
+"--enable-so" \
+"--enable-rewrite" \
+"--enable-ssl" \
+"--enable-cgi" \
+"--enable-cgid" \
+"--enable-modules=most" \
+"--enable-mods-shared=most" \
+"--enable-mpms-shared=all" \
+"--with-mpm=event" \
+"--with-apr=/usr/local/apr" \
+"--with-apr-util=/usr/local/apr-util" \
+"$@"
+
 [root@Linux-node5-master-mysql php]# ls bin/ #php-config和phpize是php命令行工具
 pear  peardev  pecl  phar  phar.phar  php  php-cgi  php-config  phpize
 [root@Linux-node5-master-mysql php]# ls etc/ #为php其他子项目提供的配置文件存放路径
@@ -1428,7 +1462,7 @@ Opcode Cache 	enabled, 62,914,560 bytes, 1 split(s), with 8192 slots each
 #DocumentRoot "/usr/local/httpd-2.4.38/htdocs" #注释中心主机
 Include /etc/httpd/extra/httpd-vhosts.conf  #把虚拟主机配置开启
 [root@Linux-node5-master-mysql ~]# vim /etc/httpd/extra/httpd-vhosts.conf  #编辑虚拟主机文件
-# Required modules: mod_log_config  #虚拟主机配置文件中有注释需要mod_log_config这个模块，因为我们要去htttpd.conf开启这个模块
+# Required modules: mod_log_config  #虚拟主机配置文件中有注释需要mod_log_config这个模块，因为我们要去httpd.conf开启这个模块
 [root@Linux-node5-master-mysql ~]# vim /etc/httpd/httpd.conf
 LoadModule log_config_module modules/mod_log_config.so  #默认是开启的，最好启用
 [root@Linux-node5-master-mysql ~]# vim /etc/httpd/extra/httpd-vhosts.conf  #编辑虚拟主机文件
@@ -1775,6 +1809,10 @@ httpd必须提供fastCGI模块，叫做fcgi
 --enable--modules=most  #能够实现编译绝大多数的模块
 #把mysql和php都卸载了，只保留了apache2.4，重新安装mysql和php
 
+php5.4-xcache3.0
+php5.5-xcache3.1
+
+
 #安装mysql
 解压mysql:
 [root@lamp download]# tar xf mysql-5.6.43-linux-glibc2.12-x86_64.tar.gz  -C /usr/local/mysql
@@ -1832,7 +1870,7 @@ chmod +x /etc/rc.d/init.d/php-fpm
 chkconfig --add php-fpm
 chkconfig php-fpm on
 #为php-fpm提供配置文件
-cp /usr/local/php/etc/ph/p-fpm.conf.default /usr/local/php/etc/php-fpm.conf
+cp /usr/local/php/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf
 #编辑php-fpm的配置文件
 #php-5.4.13的/usr/local/php/etc/php-fpm.conf配置：
 #vim /usr/local/php/etc/php-fpm.conf
@@ -1878,7 +1916,7 @@ ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/megedu.com/$1 #只要匹�
     CustomLog "/var/log/httpd/a.org-access_log" common
     ProxyRequests Off
     ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/a.org/$1
-    <Directory "www.a.org">
+    <Directory "/www/a.org/">
         Options none
         AllowOverride none
         Require all granted
@@ -1890,7 +1928,6 @@ ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/www/megedu.com/$1 #只要匹�
 AddType application/x-httpd-php .php
 AddType application/x-httpd-php-source .phps
 #DocumentRoot "/usr/local/httpd-2.4.10/htdocs" #注释取消中心主机
-Include /etc/httpd/extra/httpd-vhosts.conf #开启虚拟机配置文件
 <IfModule dir_module>
     DirectoryIndex index.php index.html  #添加index.php主页
 </IfModule>
