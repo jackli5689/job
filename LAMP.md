@@ -1562,6 +1562,8 @@ Transfer rate:          186.21 [Kbytes/sec] received #这个是每秒传输的�
 #注意：用请求峰值来衡量网站标准
 
 #用动态网站做测试，phpMyAdmin
+参考链接：https://www.phpmyadmin.net/files/
+[root@lamp down]# wget https://files.phpmyadmin.net/phpMyAdmin/4.4.12/phpMyAdmin-4.4.12-english.tar.gz
 [root@Linux-node5-master-mysql download]# tar -xf phpMyAdmin-3.4.3.2-all-languages.tar.gz -C /www/b.net
 [root@Linux-node5-master-mysql b.net]# mv phpMyAdmin-3.4.3.2-all-languages pma
 [root@Linux-node5-master-mysql pma]# cp config.sample.inc.php config.inc.php
@@ -1857,12 +1859,12 @@ pid-file=/mydata/mysqld.pid
 
 #安装php的fastCGI
 #php下载地址：https://www.php.net/releases/
-#安装php-7.1.26版本：
-./configure --prefix=/usr/local/php-7.1.26 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 #--enable-fpm 这个是开启fastCGI模型，--with-apxs2=/usr/local/apache/bin/apxs必须关掉,只能选其一，--enable-maintainer-zts这项开启线程的也关掉，fastCGI不使用线程，
+#安装php-5.4.24版本：
+./configure --prefix=/usr/local/php-5.4.24 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --with-freetype-dir --with-jpeg-dir --with-png-dir --with-zlib --with-libxml-dir=/usr --enable-xml --enable-sockets --enable-fpm --with-mcrypt --with-config-file-path=/etc --with-config-file-scan-dir=/etc/php.d --with-bz2 #--enable-fpm 这个是开启fastCGI模型，--with-apxs2=/usr/local/apache/bin/apxs必须关掉,只能选其一，--enable-maintainer-zts这项开启线程的也关掉，fastCGI不使用线程，
 #checking for BZip2 in default path... not found configure: error: Please reinstall the BZip2 distribution #报这个错
 yum -y install bzip2-devel #安装bzip2-devel包解决依赖
 #configure: error: mcrypt.h not found. Please reinstall libmcrypt#报错
-[root@lamp php-7.1.26]# yum install libmcrypt-devel -y #安装libmcrypt-devel解决依赖
+[root@lamp php-5.4.24]# yum install libmcrypt-devel -y #安装libmcrypt-devel解决依赖
 make && make install 
 #为php-fpm提供init脚本
 cp sapi/fpm/init.d.php-fpm /etc/rc.d/init.d/php-fpm
@@ -1879,7 +1881,7 @@ pm.start_servers = 5
 pm.min_spare_servers = 2
 pm.max_spare_servers = 8
 pid = /usr/local/php/var/run/php-fpm.pid
-#php-7.1.26的/usr/local/php/etc/php-fpm.conf配置：
+#php-5.4.24的/usr/local/php/etc/php-fpm.conf配置：
 #[root@lamp php-fpm.d]# vim /usr/local/php/etc/php-fpm.conf
 pid = run/php-fpm.pid  #pid路径开启
 [root@lamp php-fpm.d]# vim /usr/local/php/etc/php-fpm.d/www.conf.default  #这个文件被include到php-fpm.conf中
