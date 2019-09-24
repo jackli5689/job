@@ -598,4 +598,10 @@ To github.com:michaelliao/learngit.git
 * 如果合并有冲突，则解决冲突，并在本地提交;
 * 没有冲突或者解决掉冲突后，再用git push origin <branch-name>推送就能成功！
 * 如果git pull提示no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令git branch --set-upstream-to <branch-name> origin/<branch-name>。
+
+git branch -a  #查看多个分支
+git pull origin release:master  #从远程仓库origin的release分支同步信息到本地的master分支
+git push origin dev:release  #从本地当前dev分支推送信息到远程仓库origin的release分支
+
+
 </pre>
