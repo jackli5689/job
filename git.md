@@ -601,7 +601,7 @@ To github.com:michaelliao/learngit.git
 
 git branch -a  #查看多个分支
 git pull origin release:master  #从远程仓库origin的release分支同步信息到本地的master分支
-git push origin dev:release  #从本地当前dev分支推送信息到远程仓库origin的release分支
-
+git push origin dev:release  #从本地当前分支dev推送信息到远程仓库的release分支
+#git有两种代码获取认证方式，一种是基于ssh的key，另一种是基于http的用户名和密码。
 
 </pre>
